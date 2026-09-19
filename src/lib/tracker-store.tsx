@@ -24,7 +24,21 @@ import {
   type TrackerState,
 } from "./tracker-data";
 
-const STORAGE_KEY = "pwt-state-v1";
+const STORAGE_KEY = "pwt-state-v4";
+
+function hydrateState(raw: string): TrackerState {
+  const parsed = JSON.parse(raw) as Partial<TrackerState>;
+  const seed = createInitialState();
+  const merged: TrackerState = {
+    ...seed,
+    ...parsed,
+    taskLogs: { ...seed.taskLogs, ...(parsed.taskLogs ?? {}) },
+    attendance: { ...seed.attendance, ...(parsed.attendance ?? {}) },
+    audit: parsed.audit ?? [],
+  };
+
+  return merged;
+}
 
 interface Ctx {
   state: TrackerState;
@@ -36,8 +50,19 @@ interface Ctx {
   today: string;
   now: number;
   toggleTask: (employeeId: string, date: string, time: string) => void;
-  setTask: (employeeId: string, date: string, time: string, status: TaskStatus) => void;
-  setAttendance: (employeeId: string, date: string, status: AttendanceStatus) => void;
+  setTask: (
+    employeeId: string,
+    date: string,
+    time: string,
+    status: TaskStatus,
+    remarks?: string,
+  ) => void;
+  setAttendance: (
+    employeeId: string,
+    date: string,
+    status: AttendanceStatus,
+    remarks?: string,
+  ) => void;
   upsert: <K extends "departments" | "jobTypes" | "shifts" | "employees" | "supervisors">(
     key: K,
     item: TrackerState[K][number],
@@ -62,7 +87,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setState(JSON.parse(raw) as TrackerState);
+      if (raw) setState(hydrateState(raw));
     } catch {
       /* ignore */
     }
@@ -105,24 +130,37 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   );
 
   const setTask = useCallback(
-    (employeeId: string, date: string, time: string, status: TaskStatus) => {
+    (
+      employeeId: string,
+      date: string,
+      time: string,
+      status: TaskStatus,
+      remarks = "",
+    ) => {
       setState((s) => {
         const emp = s.employees.find((e) => e.id === employeeId);
         const next = {
           ...s,
           taskLogs: {
             ...s.taskLogs,
-            [taskKey(employeeId, date, time)]:
-              status === "completed"
+            [taskKey(employeeId, date, time)]: {
+              status,
+              ...(remarks.trim() ? { remarks: remarks.trim() } : {}),
+              ...(status !== "pending"
                 ? {
-                    status,
                     markedBy: actorName,
                     markedAt: new Date().toTimeString().slice(0, 5),
                   }
-                : { status },
+                : {}),
+            },
           },
         };
-        return log(next, `Task ${time} for ${emp?.name ?? employeeId} set to ${status}`);
+        return log(
+          next,
+          `Task ${time} for ${emp?.name ?? employeeId} set to ${status}${
+            remarks.trim() ? " with a remark" : ""
+          }`,
+        );
       });
     },
     [actorName, log],
@@ -138,14 +176,15 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
           ...s,
           taskLogs: {
             ...s.taskLogs,
-            [taskKey(employeeId, date, time)]:
-              nextStatus === "completed"
+            [taskKey(employeeId, date, time)]: {
+              status: nextStatus,
+              ...(nextStatus === "completed"
                 ? {
-                    status: nextStatus,
                     markedBy: actorName,
                     markedAt: new Date().toTimeString().slice(0, 5),
                   }
-                : { status: nextStatus },
+                : {}),
+            },
           },
         };
         return log(next, `Task ${time} for ${emp?.name ?? employeeId} marked ${nextStatus}`);
@@ -155,7 +194,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   );
 
   const setAttendance = useCallback(
-    (employeeId: string, date: string, status: AttendanceStatus) => {
+    (employeeId: string, date: string, status: AttendanceStatus, remarks = "") => {
       setState((s) => {
         const emp = s.employees.find((e) => e.id === employeeId);
         const next = {
@@ -164,6 +203,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
             ...s.attendance,
             [attKey(employeeId, date)]: {
               status,
+              ...(remarks.trim() ? { remarks: remarks.trim() } : {}),
               markedBy: actorName,
               markedAt: new Date().toTimeString().slice(0, 5),
             },
@@ -240,6 +280,7 @@ export function effectiveTaskStatus(
 ): TaskStatus | "upcoming" {
   if (logStatus === "completed") return "completed";
   if (logStatus === "missed") return "missed";
+  if (logStatus === "needs_redo") return "needs_redo";
   if (!isToday) return logStatus ?? "missed";
   return minutesOf(time) + 30 < now ? "missed" : "pending";
 }

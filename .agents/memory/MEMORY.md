@@ -1,2 +1,3 @@
 - [Bun import setup](bun-import-setup.md) — imported Bun projects may need the lockfile install command rerun before local executable links appear.
 - [Replit Vite proxy](replit-vite-proxy.md) — Vite previews must allow Replit's generated *.replit.dev hostnames.
+- [Hash-linked SSR sections](hash-linked-ssr-sections.md) — read URL hashes after hydration so TanStack Start does not render different server/client tabs.

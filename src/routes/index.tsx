@@ -1,7 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { AlertTriangle, ArrowLeft, Check, ChevronRight, Flag, Users } from "lucide-react";
 import { useMemo, useState } from "react";
-import { AlertTriangle, Check } from "lucide-react";
-import { attKey, minutesOf, taskKey, type Employee } from "@/lib/tracker-data";
+import {
+  attKey,
+  minutesOf,
+  taskKey,
+  type AttendanceStatus,
+  type Employee,
+  type TaskStatus,
+} from "@/lib/tracker-data";
 import { effectiveTaskStatus, useLookups, useTracker } from "@/lib/tracker-store";
 import { cn } from "@/lib/utils";
 
@@ -12,212 +19,497 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "One-screen daily marking: tap to confirm each scheduled cleaning task and mark attendance for every worker on the platform.",
+          "Department-first daily workforce operations with task, attendance, and quality marking.",
       },
       { property: "og:title", content: "Today's Round — Platform Workforce Tracker" },
-      {
-        property: "og:description",
-        content:
-          "One-screen daily marking: tap to confirm each scheduled cleaning task and mark attendance for every worker on the platform.",
-      },
     ],
   }),
   component: Dashboard,
 });
 
-type Filter = { kind: "all" } | { kind: "dept"; id: string } | { kind: "shift"; id: string } | { kind: "missed" };
+type Filter =
+  | { kind: "all" }
+  | { kind: "shift"; id: string }
+  | { kind: "missed" }
+  | { kind: "flagged" };
+
+const taskStatusLabel: Record<TaskStatus, string> = {
+  pending: "Pending",
+  completed: "Done",
+  missed: "Missed",
+  needs_redo: "Needs redo",
+};
 
 function Dashboard() {
-  const { state, role, supervisorId, today, now, toggleTask, setAttendance } = useTracker();
+  const { state, role, supervisorId, today, now } = useTracker();
   const lk = useLookups();
-  const [filter, setFilter] = useState<Filter>({ kind: "all" });
+  const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
 
-  const visibleDeptIds = useMemo(() => {
-    if (role === "admin") return state.departments.map((d) => d.id);
-    return lk.supervisor(supervisorId)?.departmentIds ?? [];
-  }, [role, state.departments, lk, supervisorId]);
+  const visibleDeptIds = useMemo(
+    () =>
+      role === "admin"
+        ? state.departments.map((d) => d.id)
+        : (lk.supervisor(supervisorId)?.departmentIds ?? []),
+    [lk, role, state.departments, supervisorId],
+  );
 
-  const isMissedFor = (emp: Employee) => {
-    const job = lk.job(emp.jobTypeId);
-    return (job?.scheduledTimes ?? []).some(
-      (t) =>
-        effectiveTaskStatus(state.taskLogs[taskKey(emp.id, today, t)]?.status, t, true, now) ===
-        "missed",
-    );
-  };
-
-  const employees = state.employees.filter((e) => {
-    if (e.status !== "active") return false;
-    if (!visibleDeptIds.includes(e.departmentId)) return false;
-    if (filter.kind === "dept") return e.departmentId === filter.id;
-    if (filter.kind === "shift") return e.shiftId === filter.id;
-    if (filter.kind === "missed") return isMissedFor(e);
-    return true;
-  });
-
-  const grouped = visibleDeptIds
-    .map((id) => ({ dept: lk.dept(id)!, list: employees.filter((e) => e.departmentId === id) }))
-    .filter((g) => g.dept && g.list.length > 0);
-
-  const overdueCount = state.employees
-    .filter((e) => visibleDeptIds.includes(e.departmentId) && e.status === "active")
-    .filter(isMissedFor).length;
+  const selectedDept = state.departments.find((d) => d.id === selectedDeptId);
 
   return (
-    <div className="space-y-4">
-      {overdueCount > 0 && (
-        <div className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger-soft px-3 py-2.5 text-sm text-foreground">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />
-          <span>
-            <strong>{overdueCount}</strong> worker{overdueCount > 1 ? "s have" : " has"} an overdue
-            task from today's schedule.
-          </span>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+            {today}
+          </p>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight">
+            {selectedDept ? selectedDept.name : "Department overview"}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {selectedDept
+              ? "Review attendance and mark every scheduled task for this department."
+              : role === "admin"
+                ? "Choose a department to begin today’s marking round."
+                : "Your assigned departments, today’s completion, and quality flags."}
+          </p>
         </div>
-      )}
-
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-        <Chip active={filter.kind === "all"} onClick={() => setFilter({ kind: "all" })}>
-          All
-        </Chip>
-        <Chip active={filter.kind === "missed"} onClick={() => setFilter({ kind: "missed" })}>
-          Missed only
-        </Chip>
-        {state.shifts.map((s) => (
-          <Chip
-            key={s.id}
-            active={filter.kind === "shift" && filter.id === s.id}
-            onClick={() => setFilter({ kind: "shift", id: s.id })}
-          >
-            {s.name}
-          </Chip>
-        ))}
-        {visibleDeptIds.map((id) => (
-          <Chip
-            key={id}
-            active={filter.kind === "dept" && filter.id === id}
-            onClick={() => setFilter({ kind: "dept", id })}
-          >
-            {lk.dept(id)?.name}
-          </Chip>
-        ))}
+        <div className="rounded-lg border border-border bg-card px-3 py-2 text-right text-xs text-muted-foreground">
+          <span className="block font-semibold text-foreground">
+            {visibleDeptIds.length} active departments
+          </span>
+          <span>Live operations view</span>
+        </div>
       </div>
 
-      {grouped.length === 0 && (
+      {selectedDept ? (
+        <DepartmentTaskView
+          departmentId={selectedDept.id}
+          onBack={() => setSelectedDeptId(null)}
+          visibleDeptIds={visibleDeptIds}
+        />
+      ) : (
+        <DepartmentOverview
+          departmentIds={visibleDeptIds}
+          onSelect={setSelectedDeptId}
+          today={today}
+          now={now}
+        />
+      )}
+    </div>
+  );
+}
+
+function DepartmentOverview({
+  departmentIds,
+  onSelect,
+  today,
+  now,
+}: {
+  departmentIds: string[];
+  onSelect: (id: string) => void;
+  today: string;
+  now: number;
+}) {
+  const { state } = useTracker();
+  const lk = useLookups();
+
+  const summaries = departmentIds
+    .map((id) => {
+      const dept = lk.dept(id);
+      const employees = state.employees.filter((e) => e.status === "active" && e.departmentId === id);
+      let total = 0;
+      let completed = 0;
+      let pending = 0;
+      let missed = 0;
+      let flagged = 0;
+      for (const emp of employees) {
+        const times = lk.job(emp.jobTypeId)?.scheduledTimes ?? [];
+        for (const time of times) {
+          total += 1;
+          const log = state.taskLogs[taskKey(emp.id, today, time)];
+          const status = effectiveTaskStatus(log?.status, time, true, now);
+          if (status === "completed") completed += 1;
+          if (status === "pending" || status === "upcoming") pending += 1;
+          if (status === "missed") missed += 1;
+          if (status === "needs_redo") flagged += 1;
+        }
+      }
+      const present = employees.filter(
+        (e) => state.attendance[attKey(e.id, today)]?.status === "present",
+      ).length;
+      return {
+        dept,
+        employees,
+        total,
+        completed,
+        pending,
+        missed,
+        flagged,
+        completion: total ? Math.round((completed / total) * 1000) / 10 : 0,
+        attendance: employees.length ? Math.round((present / employees.length) * 1000) / 10 : 0,
+      };
+    })
+    .filter((summary) => summary.dept);
+
+  return (
+    <section aria-labelledby="department-overview" className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 id="department-overview" className="text-sm font-semibold">
+          Today by department
+        </h3>
+        <span className="text-xs text-muted-foreground">{summaries.length} departments</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {summaries.map((summary) => (
+          <button
+            key={summary.dept!.id}
+            onClick={() => onSelect(summary.dept!.id)}
+            className="group rounded-xl border border-border bg-card p-4 text-left transition hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-sm"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold">{summary.dept!.name}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{summary.dept!.zone}</p>
+              </div>
+              <ChevronRight
+                className="size-5 shrink-0 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-primary"
+                aria-hidden
+              />
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <Metric label="Completion" value={`${summary.completion}%`} />
+              <Metric label="Attendance" value={`${summary.attendance}%`} />
+              <Metric label="Employees" value={String(summary.employees.length)} icon={Users} />
+              <Metric label="Tasks" value={`${summary.completed}/${summary.total}`} />
+            </div>
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              <Badge tone="warning">{summary.pending} pending</Badge>
+              <Badge tone="danger">{summary.missed} missed</Badge>
+              <Badge tone="orange">{summary.flagged} flagged</Badge>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function DepartmentTaskView({
+  departmentId,
+  onBack,
+  visibleDeptIds,
+}: {
+  departmentId: string;
+  onBack: () => void;
+  visibleDeptIds: string[];
+}) {
+  const { state, today, now, setTask, setAttendance } = useTracker();
+  const lk = useLookups();
+  const [filter, setFilter] = useState<Filter>({ kind: "all" });
+  const [editingTask, setEditingTask] = useState<string | null>(null);
+  const dept = lk.dept(departmentId);
+  const employees = state.employees.filter((emp) => {
+    if (emp.status !== "active" || emp.departmentId !== departmentId) return false;
+    if (filter.kind === "shift") return emp.shiftId === filter.id;
+    const job = lk.job(emp.jobTypeId);
+    const statuses = (job?.scheduledTimes ?? []).map((time) =>
+      effectiveTaskStatus(state.taskLogs[taskKey(emp.id, today, time)]?.status, time, true, now),
+    );
+    if (filter.kind === "missed") return statuses.includes("missed");
+    if (filter.kind === "flagged") return statuses.includes("needs_redo");
+    return true;
+  });
+  const shifts = state.shifts.filter((shift) =>
+    state.employees.some((emp) => emp.departmentId === departmentId && emp.shiftId === shift.id),
+  );
+
+  return (
+    <section className="space-y-3" aria-labelledby="department-task-view">
+      <button
+        onClick={onBack}
+        className="inline-flex min-h-11 items-center gap-2 rounded-md border border-input bg-card px-3 text-sm font-medium"
+      >
+        <ArrowLeft className="size-4" aria-hidden /> Back to departments
+      </button>
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 id="department-task-view" className="text-lg font-bold">
+              {dept?.name}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {dept?.zone} · {employees.length} workers in this view
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <span className="size-2 rounded-full bg-success" /> Done
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="size-2 rounded-full bg-orange-500" /> Needs redo
+            </span>
+          </div>
+        </div>
+        <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1">
+          <Chip active={filter.kind === "all"} onClick={() => setFilter({ kind: "all" })}>
+            All workers
+          </Chip>
+          {shifts.map((shift) => (
+            <Chip
+              key={shift.id}
+              active={filter.kind === "shift" && filter.id === shift.id}
+              onClick={() => setFilter({ kind: "shift", id: shift.id })}
+            >
+              {shift.name}
+            </Chip>
+          ))}
+          <Chip active={filter.kind === "missed"} onClick={() => setFilter({ kind: "missed" })}>
+            Missed only
+          </Chip>
+          <Chip active={filter.kind === "flagged"} onClick={() => setFilter({ kind: "flagged" })}>
+            Flagged only
+          </Chip>
+        </div>
+      </div>
+
+      {employees.length === 0 && (
         <p className="rounded-lg border border-border bg-card p-6 text-center text-sm text-muted-foreground">
           No workers match this filter.
         </p>
       )}
+      <div className="space-y-3">
+        {employees.map((emp) => {
+          const job = lk.job(emp.jobTypeId);
+          const shift = lk.shift(emp.shiftId);
+          const attendance = state.attendance[attKey(emp.id, today)];
+          const times = job?.scheduledTimes ?? [];
+          const done = times.filter(
+            (time) => state.taskLogs[taskKey(emp.id, today, time)]?.status === "completed",
+          ).length;
+          return (
+            <article key={emp.id} className="rounded-xl border border-border bg-card p-4">
+              <div className="flex flex-wrap items-start gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-foreground">
+                  {emp.name
+                    .split(" ")
+                    .map((part) => part[0])
+                    .join("")}
+                </div>
+                <div className="min-w-[180px] flex-1">
+                  <p className="font-semibold">{emp.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {emp.code} · {job?.title} · {shift?.name} {shift?.start}–{shift?.end}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="sr-only" htmlFor={`attendance-${emp.id}`}>
+                    Attendance for {emp.name}
+                  </label>
+                  <select
+                    id={`attendance-${emp.id}`}
+                    value={attendance?.status ?? "present"}
+                    onChange={(event) =>
+                      setAttendance(
+                        emp.id,
+                        today,
+                        event.target.value as AttendanceStatus,
+                        attendance?.remarks,
+                      )
+                    }
+                    className="min-h-11 rounded-md border border-input bg-card px-2 text-sm font-medium"
+                  >
+                    <option value="present">Present</option>
+                    <option value="absent">Absent</option>
+                    <option value="half-day">Half-day</option>
+                    <option value="leave">Leave</option>
+                  </select>
+                </div>
+              </div>
 
-      {grouped.map(({ dept, list }) => (
-        <section key={dept.id} className="space-y-2">
-          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {dept.name} · {dept.zone}
-          </h2>
-          <div className="space-y-2">
-            {list.map((emp) => {
-              const job = lk.job(emp.jobTypeId);
-              const shift = lk.shift(emp.shiftId);
-              const att = state.attendance[attKey(emp.id, today)]?.status ?? "present";
-              const times = job?.scheduledTimes ?? [];
-              const done = times.filter(
-                (t) => state.taskLogs[taskKey(emp.id, today, t)]?.status === "completed",
-              ).length;
+              {attendance?.status && attendance.status !== "present" && (
+                <input
+                  className="mt-3 min-h-11 w-full rounded-md border border-input bg-card px-3 text-sm"
+                  value={attendance.remarks ?? ""}
+                  placeholder="Optional attendance reason"
+                  onChange={(event) =>
+                    setAttendance(emp.id, today, attendance.status, event.target.value)
+                  }
+                />
+              )}
 
-              return (
-                <article key={emp.id} className="rounded-lg border border-border bg-card p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">
-                      {emp.name
-                        .split(" ")
-                        .map((p) => p[0])
-                        .join("")}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{emp.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {emp.code} · {shift?.name} {shift?.start}–{shift?.end}
-                      </p>
-                    </div>
-                    <div className="flex gap-1">
+              <div className="mt-4 flex flex-wrap gap-2">
+                {times.map((time) => {
+                  const key = taskKey(emp.id, today, time);
+                  const log = state.taskLogs[key];
+                  const status = effectiveTaskStatus(log?.status, time, true, now);
+                  const notDue = now > 0 && minutesOf(time) > now;
+                  return (
+                    <div key={time} className="flex items-center gap-1">
                       <button
-                        onClick={() => setAttendance(emp.id, today, "present")}
-                        aria-pressed={att === "present"}
+                        onClick={() => {
+                          const next = status === "completed" ? "pending" : "completed";
+                          setTask(emp.id, today, time, next);
+                          setEditingTask(null);
+                        }}
+                        disabled={attendance?.status === "absent"}
                         className={cn(
-                          "min-h-11 rounded-md px-3 text-sm font-semibold",
-                          att === "present"
-                            ? "bg-success text-success-foreground"
-                            : "bg-neutral-soft text-muted-foreground",
+                          "flex min-h-11 min-w-[74px] items-center justify-center gap-1 rounded-md border px-2 text-sm font-semibold disabled:opacity-40",
+                          status === "completed" && "border-success bg-success text-success-foreground",
+                          status === "missed" && "border-danger bg-danger-soft text-danger",
+                          status === "needs_redo" &&
+                            "border-orange-500 bg-orange-100 text-orange-800",
+                          status === "pending" &&
+                            !notDue &&
+                            "border-warning bg-warning-soft text-warning-foreground",
+                          status === "pending" &&
+                            notDue &&
+                            "border-border bg-neutral-soft text-muted-foreground",
                         )}
                       >
-                        P
+                        {status === "completed" && <Check className="size-4" aria-hidden />}
+                        {status === "needs_redo" && <Flag className="size-4" aria-hidden />}
+                        {time}
                       </button>
                       <button
-                        onClick={() => setAttendance(emp.id, today, "absent")}
-                        aria-pressed={att === "absent"}
-                        className={cn(
-                          "min-h-11 rounded-md px-3 text-sm font-semibold",
-                          att === "absent"
-                            ? "bg-danger text-danger-foreground"
-                            : "bg-neutral-soft text-muted-foreground",
-                        )}
+                        aria-label={`Edit ${time} status for ${emp.name}`}
+                        onClick={() => setEditingTask(editingTask === key ? null : key)}
+                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-input text-xs text-muted-foreground hover:bg-accent"
                       >
-                        A
+                        …
                       </button>
                     </div>
+                  );
+                })}
+              </div>
+              {times.length > 0 && (
+                <div className="mt-3 flex items-center gap-2">
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-soft">
+                    <div
+                      className="h-full rounded-full bg-success transition-all"
+                      style={{ width: `${(done / times.length) * 100}%` }}
+                    />
                   </div>
+                  <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                    {done}/{times.length} done
+                  </span>
+                </div>
+              )}
+              {times.map((time) => {
+                const key = taskKey(emp.id, today, time);
+                return editingTask === key ? (
+                  <TaskEditor
+                    key={`editor-${key}`}
+                    employee={emp}
+                    time={time}
+                    {...(state.taskLogs[key] ? { current: state.taskLogs[key] } : {})}
+                    onSave={(status, remarks) => {
+                      setTask(emp.id, today, time, status, remarks);
+                      setEditingTask(null);
+                    }}
+                  />
+                ) : null;
+              })}
+            </article>
+          );
+        })}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Tap a task to mark it done. Use the … control to record Missed or Needs redo with a remark.
+      </p>
+    </section>
+  );
+}
 
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {times.map((t) => {
-                      const st = effectiveTaskStatus(
-                        state.taskLogs[taskKey(emp.id, today, t)]?.status,
-                        t,
-                        true,
-                        now,
-                      );
-                      const notDue = now > 0 && minutesOf(t) > now;
-                      return (
-                        <button
-                          key={t}
-                          onClick={() => toggleTask(emp.id, today, t)}
-                          disabled={att === "absent"}
-                          className={cn(
-                            "flex min-h-11 min-w-[72px] items-center justify-center gap-1 rounded-md border px-2 text-sm font-medium disabled:opacity-40",
-                            st === "completed" &&
-                              "border-success bg-success text-success-foreground",
-                            st === "missed" && "border-danger bg-danger-soft text-danger",
-                            st === "pending" &&
-                              !notDue &&
-                              "border-warning bg-warning-soft text-warning-foreground",
-                            st === "pending" &&
-                              notDue &&
-                              "border-border bg-neutral-soft text-muted-foreground",
-                          )}
-                        >
-                          {st === "completed" && <Check className="size-4" aria-hidden />}
-                          {t}
-                        </button>
-                      );
-                    })}
-                  </div>
+function TaskEditor({
+  employee,
+  time,
+  current,
+  onSave,
+}: {
+  employee: Employee;
+  time: string;
+  current?: { status: TaskStatus; remarks?: string };
+  onSave: (status: TaskStatus, remarks: string) => void;
+}) {
+  const [status, setStatus] = useState<TaskStatus>(current?.status ?? "pending");
+  const [remarks, setRemarks] = useState(current?.remarks ?? "");
+  const requiresRemark = status === "missed" || status === "needs_redo";
 
-                  <div className="mt-3 flex items-center gap-2">
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-soft">
-                      <div
-                        className="h-full rounded-full bg-success transition-all"
-                        style={{ width: `${times.length ? (done / times.length) * 100 : 0}%` }}
-                      />
-                    </div>
-                    <span className="text-xs font-medium tabular-nums text-muted-foreground">
-                      {done}/{times.length}
-                    </span>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+  return (
+    <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-semibold">
+          Update {employee.name} · {time}
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {(["completed", "missed", "needs_redo"] as const).map((nextStatus) => (
+            <button
+              key={nextStatus}
+              onClick={() => setStatus(nextStatus)}
+              className={cn(
+                "min-h-10 rounded-md border px-3 text-xs font-semibold",
+                status === nextStatus
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-input bg-card text-muted-foreground",
+              )}
+            >
+              {taskStatusLabel[nextStatus]}
+            </button>
+          ))}
+        </div>
+      </div>
+      {requiresRemark && (
+        <input
+          autoFocus
+          value={remarks}
+          onChange={(event) => setRemarks(event.target.value)}
+          placeholder="Required: explain what happened"
+          className="mt-3 min-h-11 w-full rounded-md border border-input bg-card px-3 text-sm"
+        />
+      )}
+      <button
+        disabled={requiresRemark && !remarks.trim()}
+        onClick={() => onSave(status, remarks)}
+        className="mt-3 min-h-11 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Save status
+      </button>
     </div>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  icon?: typeof Users;
+}) {
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-0.5 flex items-center gap-1 text-lg font-bold tabular-nums">
+        {Icon && <Icon className="size-4 text-primary" aria-hidden />}
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function Badge({ children, tone }: { children: React.ReactNode; tone: "warning" | "danger" | "orange" }) {
+  return (
+    <span
+      className={cn(
+        "rounded-full px-2 py-1 text-[11px] font-semibold",
+        tone === "warning" && "bg-warning-soft text-warning-foreground",
+        tone === "danger" && "bg-danger-soft text-danger",
+        tone === "orange" && "bg-orange-100 text-orange-800",
+      )}
+    >
+      {children}
+    </span>
   );
 }
 

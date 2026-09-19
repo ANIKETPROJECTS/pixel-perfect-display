@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { attKey, dateKey, type AttendanceStatus } from "@/lib/tracker-data";
 import { useLookups, useTracker } from "@/lib/tracker-store";
@@ -36,18 +36,44 @@ const TABS = [
 ] as const;
 
 const ATT_CYCLE: AttendanceStatus[] = ["present", "absent", "half-day", "leave"];
+const TAB_HASH: Record<(typeof TABS)[number], string> = {
+  Employees: "employees",
+  Departments: "departments",
+  "Job types": "job-types",
+  Shifts: "shifts",
+  Supervisors: "supervisors",
+  Attendance: "attendance",
+  Audit: "audit",
+};
 
 function Admin() {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Employees");
   const { reset } = useTracker();
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    const next = TABS.find((item) => TAB_HASH[item] === hash);
+    if (next) setTab(next);
+  }, []);
+  const changeTab = (next: (typeof TABS)[number]) => {
+    setTab(next);
+    if (typeof window !== "undefined") window.history.replaceState(null, "", `/admin#${TAB_HASH[next]}`);
+  };
 
   return (
     <div className="space-y-4">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Administration</p>
+        <h2 className="mt-1 text-2xl font-bold tracking-tight">Manage workforce setup</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Keep people, schedules, attendance, and accountability records current.
+        </p>
+      </div>
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4">
         {TABS.map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
+            onClick={() => changeTab(t)}
+            id={TAB_HASH[t]}
             className={cn(
               "min-h-10 shrink-0 rounded-full border px-4 text-sm font-medium",
               tab === t
@@ -60,13 +86,15 @@ function Admin() {
         ))}
       </div>
 
-      {tab === "Employees" && <Employees />}
-      {tab === "Departments" && <Departments />}
-      {tab === "Job types" && <JobTypes />}
-      {tab === "Shifts" && <Shifts />}
-      {tab === "Supervisors" && <Supervisors />}
-      {tab === "Attendance" && <AttendanceGrid />}
-      {tab === "Audit" && <Audit />}
+      <section aria-live="polite">
+        {tab === "Employees" && <Employees />}
+        {tab === "Departments" && <Departments />}
+        {tab === "Job types" && <JobTypes />}
+        {tab === "Shifts" && <Shifts />}
+        {tab === "Supervisors" && <Supervisors />}
+        {tab === "Attendance" && <AttendanceGrid />}
+        {tab === "Audit" && <Audit />}
+      </section>
 
       <button
         onClick={() => reset()}
@@ -439,6 +467,7 @@ function Supervisors() {
 function AttendanceGrid() {
   const { state, setAttendance } = useTracker();
   const [empId, setEmpId] = useState(state.employees[0]?.id ?? "");
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const now = new Date();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const days = Array.from({ length: daysInMonth }, (_, i) =>
@@ -471,8 +500,10 @@ function AttendanceGrid() {
               key={d}
               disabled={future}
               onClick={() => {
-                const next = ATT_CYCLE[(ATT_CYCLE.indexOf(st ?? "leave") + 1) % ATT_CYCLE.length];
-                setAttendance(empId, d, next);
+                const next =
+                  ATT_CYCLE[(ATT_CYCLE.indexOf(st ?? "leave") + 1) % ATT_CYCLE.length] ?? "present";
+                setSelectedDate(d);
+                setAttendance(empId, d, next, state.attendance[attKey(empId, d)]?.remarks);
               }}
               className={cn(
                 "flex min-h-11 flex-col items-center justify-center rounded text-xs font-medium disabled:opacity-30",
@@ -488,6 +519,26 @@ function AttendanceGrid() {
           );
         })}
       </div>
+      {selectedDate && (
+        <div className="rounded-lg border border-border bg-muted/40 p-3">
+          <p className="text-xs font-semibold">
+            {selectedDate} · {state.attendance[attKey(empId, selectedDate)]?.status ?? "not marked"}
+          </p>
+          <input
+            className={cn(inputCls, "mt-2")}
+            value={state.attendance[attKey(empId, selectedDate)]?.remarks ?? ""}
+            placeholder="Optional reason, e.g. informed sick or left early"
+            onChange={(event) =>
+              setAttendance(
+                empId,
+                selectedDate,
+                state.attendance[attKey(empId, selectedDate)]?.status ?? "present",
+                event.target.value,
+              )
+            }
+          />
+        </div>
+      )}
       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
         <span>Green = present</span>
         <span>Red = absent</span>

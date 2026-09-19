@@ -1,17 +1,21 @@
 export type Role = "admin" | "supervisor";
-export type TaskStatus = "pending" | "completed" | "missed";
+export type TaskStatus = "pending" | "completed" | "missed" | "needs_redo";
 export type AttendanceStatus = "present" | "absent" | "half-day" | "leave";
+export type DepartmentGroup = "station" | "colony";
 
 export interface Department {
   id: string;
   name: string;
   zone: string;
+  group: DepartmentGroup;
 }
 
 export interface JobType {
   id: string;
   departmentId: string;
   title: string;
+  frequencyPerDay: number;
+  frequencyLabel: string;
   scheduledTimes: string[];
 }
 
@@ -25,6 +29,7 @@ export interface Shift {
 export interface Employee {
   id: string;
   code: string;
+  hrmsEmployeeId: string;
   name: string;
   departmentId: string;
   jobTypeId: string;
@@ -44,12 +49,14 @@ export interface Supervisor {
 
 export interface TaskLog {
   status: TaskStatus;
+  remarks?: string;
   markedBy?: string;
   markedAt?: string;
 }
 
 export interface AttendanceEntry {
   status: AttendanceStatus;
+  remarks?: string;
   markedBy?: string;
   markedAt?: string;
 }
@@ -73,48 +80,226 @@ export interface TrackerState {
 }
 
 export const departments: Department[] = [
-  { id: "d1", name: "Platform Sweeping", zone: "Platform 1" },
-  { id: "d2", name: "Washroom Cleaning", zone: "Platform 2" },
-  { id: "d3", name: "Garbage Collection", zone: "Platform 1-3" },
-  { id: "d4", name: "Water Booth Maintenance", zone: "Platform 3" },
-  { id: "d5", name: "Waiting Room Upkeep", zone: "AC Waiting Room" },
-  { id: "d6", name: "Foot Overbridge (FOB) Cleaning", zone: "FOB 1-2" },
-  { id: "d7", name: "Pest Control & Sanitization", zone: "All Platforms" },
+  { id: "d1", name: "Platforms", zone: "Platforms 1–7", group: "station" },
+  { id: "d2", name: "Tracks", zone: "Tracks 1–7", group: "station" },
+  { id: "d3", name: "Foot Over Bridges (FOB)", zone: "FOB 4 Nos.", group: "station" },
+  {
+    id: "d4",
+    name: "Waiting Halls & Retiring Rooms",
+    zone: "Waiting halls and retiring rooms",
+    group: "station",
+  },
+  { id: "d5", name: "Concourse & Offices", zone: "New building and booking offices", group: "station" },
+  { id: "d6", name: "Circulating Area", zone: "Station circulating area", group: "station" },
+  { id: "d7", name: "Cobweb & Dusting", zone: "Roofs, FOBs and electricals", group: "station" },
+  { id: "d8", name: "Sanitary Amenities & Drains", zone: "Sanitary amenities and five open drains", group: "station" },
+  { id: "d9", name: "Garbage & Waste Management", zone: "Station waste collection", group: "station" },
+  { id: "d10", name: "Pest & Rodent Control", zone: "Station pest control", group: "station" },
+  { id: "d11", name: "Periodic & Specialized", zone: "Periodic assets and specialist work", group: "station" },
+  { id: "d12", name: "Colony Housekeeping", zone: "North and South railway colony", group: "colony" },
 ];
 
 export const jobTypes: JobType[] = [
   {
     id: "j1",
     departmentId: "d1",
-    title: "Platform Sweeper",
-    scheduledTimes: ["06:00", "10:00", "14:00", "18:00"],
+    title: "Platform Sweeping/Mopping/Scrubbing",
+    frequencyPerDay: 5,
+    frequencyLabel: "5x/day",
+    scheduledTimes: ["05:30", "08:30", "11:30", "15:30", "19:30"],
   },
   {
     id: "j2",
-    departmentId: "d2",
-    title: "Washroom/Toilet Cleaner",
-    scheduledTimes: ["05:30", "08:00", "11:00", "14:00", "17:00", "20:00"],
+    departmentId: "d1",
+    title: "Tap Booths & Pedestal Washing",
+    frequencyPerDay: 1,
+    frequencyLabel: "1x/day",
+    scheduledTimes: ["07:00"],
   },
   {
     id: "j3",
-    departmentId: "d3",
-    title: "Garbage Collector",
-    scheduledTimes: ["07:00", "13:00", "19:00"],
+    departmentId: "d1",
+    title: "Columns with Dadoos Cleaning",
+    frequencyPerDay: 1,
+    frequencyLabel: "1x/day",
+    scheduledTimes: ["10:00"],
   },
   {
     id: "j4",
-    departmentId: "d4",
-    title: "Water Point Attendant",
-    scheduledTimes: ["09:00", "16:00"],
+    departmentId: "d2",
+    title: "Track Sweeping & Apron Washing",
+    frequencyPerDay: 3,
+    frequencyLabel: "3x/day",
+    scheduledTimes: ["06:00", "12:00", "18:00"],
   },
   {
     id: "j5",
-    departmentId: "d5",
-    title: "Waiting Room Cleaner",
-    scheduledTimes: ["07:30", "12:30", "17:30"],
+    departmentId: "d3",
+    title: "FOB Sweeping, Dusting, Staircases",
+    frequencyPerDay: 2,
+    frequencyLabel: "2x/day",
+    scheduledTimes: ["08:00", "16:00"],
   },
-  { id: "j6", departmentId: "d6", title: "FOB Cleaner", scheduledTimes: ["08:30", "15:30"] },
-  { id: "j7", departmentId: "d7", title: "Sanitization Worker", scheduledTimes: ["06:30"] },
+  {
+    id: "j6",
+    departmentId: "d4",
+    title: "Sweeping, Mopping, Spot Washing",
+    frequencyPerDay: 5,
+    frequencyLabel: "5x/day",
+    scheduledTimes: ["06:00", "09:00", "12:00", "15:00", "18:00"],
+  },
+  {
+    id: "j7",
+    departmentId: "d5",
+    title: "Concourse Area Cleaning",
+    frequencyPerDay: 2,
+    frequencyLabel: "2x/day",
+    scheduledTimes: ["07:00", "17:00"],
+  },
+  {
+    id: "j8",
+    departmentId: "d5",
+    title: "Office Sweeping/Mopping/Sanitary",
+    frequencyPerDay: 2,
+    frequencyLabel: "2x/day",
+    scheduledTimes: ["08:00", "16:00"],
+  },
+  {
+    id: "j9",
+    departmentId: "d5",
+    title: "Wall Cladding Cleaning",
+    frequencyPerDay: 1,
+    frequencyLabel: "1x/day",
+    scheduledTimes: ["11:00"],
+  },
+  {
+    id: "j10",
+    departmentId: "d6",
+    title: "Sweeping & Garbage Collection",
+    frequencyPerDay: 2,
+    frequencyLabel: "2x/day",
+    scheduledTimes: ["07:00", "17:00"],
+  },
+  {
+    id: "j11",
+    departmentId: "d7",
+    title: "Cobweb Removal",
+    frequencyPerDay: 0,
+    frequencyLabel: "Weekly",
+    scheduledTimes: ["09:00"],
+  },
+  {
+    id: "j12",
+    departmentId: "d8",
+    title: "Sanitary Amenities Cleaning",
+    frequencyPerDay: 6,
+    frequencyLabel: "6x/day",
+    scheduledTimes: ["05:30", "08:00", "11:00", "14:00", "17:00", "20:00"],
+  },
+  {
+    id: "j13",
+    departmentId: "d8",
+    title: "Drains Cleaning",
+    frequencyPerDay: 1,
+    frequencyLabel: "1x/day",
+    scheduledTimes: ["10:00"],
+  },
+  {
+    id: "j14",
+    departmentId: "d8",
+    title: "Dustbin Cleaning + Biodegradable Covers",
+    frequencyPerDay: 3,
+    frequencyLabel: "3x/day",
+    scheduledTimes: ["07:00", "13:00", "19:00"],
+  },
+  {
+    id: "j15",
+    departmentId: "d9",
+    title: "Garbage Collection & Disposal",
+    frequencyPerDay: 3,
+    frequencyLabel: "3x/day (trips)",
+    scheduledTimes: ["07:00", "13:00", "19:00"],
+  },
+  {
+    id: "j16",
+    departmentId: "d10",
+    title: "Pest Control Activity",
+    frequencyPerDay: 2,
+    frequencyLabel: "2x/day",
+    scheduledTimes: ["06:30", "18:30"],
+  },
+  {
+    id: "j17",
+    departmentId: "d10",
+    title: "Rodent Control Activity",
+    frequencyPerDay: 0,
+    frequencyLabel: "Fortnightly",
+    scheduledTimes: ["10:30"],
+  },
+  {
+    id: "j18",
+    departmentId: "d11",
+    title: "Glass Cleaning",
+    frequencyPerDay: 0,
+    frequencyLabel: "Once/4 months",
+    scheduledTimes: ["09:00"],
+  },
+  {
+    id: "j19",
+    departmentId: "d11",
+    title: "SS Dustbin Stand Provision",
+    frequencyPerDay: 0,
+    frequencyLabel: "As-needed asset",
+    scheduledTimes: ["10:00"],
+  },
+  {
+    id: "j20",
+    departmentId: "d12",
+    title: "Road Sweeping (North & South colony)",
+    frequencyPerDay: 1,
+    frequencyLabel: "1x/day",
+    scheduledTimes: ["07:00"],
+  },
+  {
+    id: "j21",
+    departmentId: "d12",
+    title: "Open Area Sweeping",
+    frequencyPerDay: 1,
+    frequencyLabel: "1x/day",
+    scheduledTimes: ["10:00"],
+  },
+  {
+    id: "j22",
+    departmentId: "d12",
+    title: "Colony Garbage Collection & Disposal",
+    frequencyPerDay: 1,
+    frequencyLabel: "Daily",
+    scheduledTimes: ["09:00"],
+  },
+  {
+    id: "j23",
+    departmentId: "d12",
+    title: "Colony Drains Cleaning",
+    frequencyPerDay: 1,
+    frequencyLabel: "1x/day + weekly desilting",
+    scheduledTimes: ["08:00"],
+  },
+  {
+    id: "j24",
+    departmentId: "d12",
+    title: "Vector Control (Anti-larval/mosquito)",
+    frequencyPerDay: 0,
+    frequencyLabel: "Weekly",
+    scheduledTimes: ["11:00"],
+  },
+  {
+    id: "j25",
+    departmentId: "d12",
+    title: "Fogging Activities",
+    frequencyPerDay: 0,
+    frequencyLabel: "Weekly/Fortnightly",
+    scheduledTimes: ["18:00"],
+  },
 ];
 
 export const shifts: Shift[] = [
@@ -124,26 +309,29 @@ export const shifts: Shift[] = [
 ];
 
 export const employees: Employee[] = [
-  { id: "e1", code: "EMP-101", name: "Ramesh Yadav", departmentId: "d1", jobTypeId: "j1", shiftId: "s1", phone: "98xxxxxx01", zone: "Platform 1", joiningDate: "2024-01-12", status: "active" },
-  { id: "e2", code: "EMP-102", name: "Suresh Pawar", departmentId: "d1", jobTypeId: "j1", shiftId: "s2", phone: "98xxxxxx02", zone: "Platform 1", joiningDate: "2024-03-03", status: "active" },
-  { id: "e3", code: "EMP-103", name: "Anita More", departmentId: "d2", jobTypeId: "j2", shiftId: "s1", phone: "98xxxxxx03", zone: "Platform 2", joiningDate: "2024-01-22", status: "active" },
-  { id: "e4", code: "EMP-104", name: "Kavita Jadhav", departmentId: "d2", jobTypeId: "j2", shiftId: "s2", phone: "98xxxxxx04", zone: "Platform 2", joiningDate: "2024-02-15", status: "active" },
-  { id: "e5", code: "EMP-105", name: "Santosh Gaikwad", departmentId: "d3", jobTypeId: "j3", shiftId: "s1", phone: "98xxxxxx05", zone: "Platform 1-3", joiningDate: "2024-04-01", status: "active" },
-  { id: "e6", code: "EMP-106", name: "Vijay Shinde", departmentId: "d3", jobTypeId: "j3", shiftId: "s3", phone: "98xxxxxx06", zone: "Platform 1-3", joiningDate: "2024-05-10", status: "active" },
-  { id: "e7", code: "EMP-107", name: "Meena Kamble", departmentId: "d4", jobTypeId: "j4", shiftId: "s1", phone: "98xxxxxx07", zone: "Platform 3", joiningDate: "2024-01-18", status: "active" },
-  { id: "e8", code: "EMP-108", name: "Prakash Salve", departmentId: "d5", jobTypeId: "j5", shiftId: "s1", phone: "98xxxxxx08", zone: "AC Waiting Room", joiningDate: "2024-02-05", status: "active" },
-  { id: "e9", code: "EMP-109", name: "Deepak Rane", departmentId: "d5", jobTypeId: "j5", shiftId: "s2", phone: "98xxxxxx09", zone: "AC Waiting Room", joiningDate: "2024-03-20", status: "active" },
-  { id: "e10", code: "EMP-110", name: "Sunita Bhosale", departmentId: "d6", jobTypeId: "j6", shiftId: "s1", phone: "98xxxxxx10", zone: "FOB 1", joiningDate: "2024-04-11", status: "active" },
-  { id: "e11", code: "EMP-111", name: "Ganesh Naik", departmentId: "d6", jobTypeId: "j6", shiftId: "s2", phone: "98xxxxxx11", zone: "FOB 2", joiningDate: "2024-01-25", status: "active" },
-  { id: "e12", code: "EMP-112", name: "Rekha Chavan", departmentId: "d7", jobTypeId: "j7", shiftId: "s1", phone: "98xxxxxx12", zone: "All Platforms", joiningDate: "2024-06-08", status: "active" },
+  { id: "e1", code: "EMP-101", hrmsEmployeeId: "HR-8801", name: "Ramesh Yadav", departmentId: "d1", jobTypeId: "j1", shiftId: "s1", phone: "98xxxxxx01", zone: "Platforms 1–7", joiningDate: "2024-01-12", status: "active" },
+  { id: "e2", code: "EMP-102", hrmsEmployeeId: "HR-8802", name: "Suresh Pawar", departmentId: "d1", jobTypeId: "j2", shiftId: "s2", phone: "98xxxxxx02", zone: "Platforms 1–7", joiningDate: "2024-03-03", status: "active" },
+  { id: "e3", code: "EMP-103", hrmsEmployeeId: "HR-8803", name: "Anita More", departmentId: "d8", jobTypeId: "j12", shiftId: "s1", phone: "98xxxxxx03", zone: "Sanitary amenities", joiningDate: "2024-01-22", status: "active" },
+  { id: "e4", code: "EMP-104", hrmsEmployeeId: "HR-8804", name: "Kavita Jadhav", departmentId: "d8", jobTypeId: "j13", shiftId: "s2", phone: "98xxxxxx04", zone: "Open drains", joiningDate: "2024-02-15", status: "active" },
+  { id: "e5", code: "EMP-105", hrmsEmployeeId: "HR-8805", name: "Santosh Gaikwad", departmentId: "d9", jobTypeId: "j15", shiftId: "s1", phone: "98xxxxxx05", zone: "Station waste area", joiningDate: "2024-04-01", status: "active" },
+  { id: "e6", code: "EMP-106", hrmsEmployeeId: "HR-8806", name: "Vijay Shinde", departmentId: "d9", jobTypeId: "j15", shiftId: "s3", phone: "98xxxxxx06", zone: "Station waste area", joiningDate: "2024-05-10", status: "active" },
+  { id: "e7", code: "EMP-107", hrmsEmployeeId: "HR-8807", name: "Meena Kamble", departmentId: "d2", jobTypeId: "j4", shiftId: "s1", phone: "98xxxxxx07", zone: "Tracks 1–7", joiningDate: "2024-01-18", status: "active" },
+  { id: "e8", code: "EMP-108", hrmsEmployeeId: "HR-8808", name: "Prakash Salve", departmentId: "d4", jobTypeId: "j6", shiftId: "s1", phone: "98xxxxxx08", zone: "Waiting halls", joiningDate: "2024-02-05", status: "active" },
+  { id: "e9", code: "EMP-109", hrmsEmployeeId: "HR-8809", name: "Deepak Rane", departmentId: "d4", jobTypeId: "j6", shiftId: "s2", phone: "98xxxxxx09", zone: "Retiring rooms", joiningDate: "2024-03-20", status: "active" },
+  { id: "e10", code: "EMP-110", hrmsEmployeeId: "HR-8810", name: "Sunita Bhosale", departmentId: "d3", jobTypeId: "j5", shiftId: "s1", phone: "98xxxxxx10", zone: "FOB 1–4", joiningDate: "2024-04-11", status: "active" },
+  { id: "e11", code: "EMP-111", hrmsEmployeeId: "HR-8811", name: "Ganesh Naik", departmentId: "d5", jobTypeId: "j8", shiftId: "s2", phone: "98xxxxxx11", zone: "Offices", joiningDate: "2024-01-25", status: "active" },
+  { id: "e12", code: "EMP-112", hrmsEmployeeId: "HR-8812", name: "Rekha Chavan", departmentId: "d10", jobTypeId: "j16", shiftId: "s1", phone: "98xxxxxx12", zone: "All station areas", joiningDate: "2024-06-08", status: "active" },
+  { id: "e13", code: "EMP-113", hrmsEmployeeId: "HR-8813", name: "Manoj Thorat", departmentId: "d6", jobTypeId: "j10", shiftId: "s1", phone: "98xxxxxx13", zone: "Circulating area", joiningDate: "2024-06-15", status: "active" },
+  { id: "e14", code: "EMP-114", hrmsEmployeeId: "HR-8814", name: "Sneha Karpe", departmentId: "d7", jobTypeId: "j11", shiftId: "s1", phone: "98xxxxxx14", zone: "Station roofs and FOBs", joiningDate: "2024-07-01", status: "active" },
+  { id: "e15", code: "EMP-115", hrmsEmployeeId: "HR-8815", name: "Ajay Pandit", departmentId: "d12", jobTypeId: "j20", shiftId: "s1", phone: "98xxxxxx15", zone: "North and South colony", joiningDate: "2024-07-12", status: "active" },
+  { id: "e16", code: "EMP-116", hrmsEmployeeId: "HR-8816", name: "Poonam Khedkar", departmentId: "d12", jobTypeId: "j22", shiftId: "s1", phone: "98xxxxxx16", zone: "Railway colony", joiningDate: "2024-07-20", status: "active" },
 ];
 
 export const supervisors: Supervisor[] = [
-  { id: "sup1", name: "R. Kulkarni", phone: "97xxxxxx11", departmentIds: ["d1", "d3", "d6"] },
-  { id: "sup2", name: "S. Deshmukh", phone: "97xxxxxx22", departmentIds: ["d2", "d4", "d5", "d7"] },
+  { id: "sup1", name: "R. Kulkarni", phone: "97xxxxxx11", departmentIds: ["d1", "d2", "d3", "d6", "d7", "d9", "d10", "d11"] },
+  { id: "sup2", name: "S. Deshmukh", phone: "97xxxxxx22", departmentIds: ["d4", "d5", "d8"] },
+  { id: "sup3", name: "A. Bhosale", phone: "97xxxxxx33", departmentIds: ["d12"] },
 ];
-
-/* ---------- helpers ---------- */
 
 export const dateKey = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -155,10 +343,9 @@ export const attKey = (employeeId: string, date: string) => `${employeeId}|${dat
 
 export const minutesOf = (time: string) => {
   const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
+  return (h ?? 0) * 60 + (m ?? 0);
 };
 
-/** deterministic pseudo-random in [0,1) */
 function rand(seed: string) {
   let h = 2166136261;
   for (let i = 0; i < seed.length; i++) {
@@ -175,8 +362,7 @@ function seedHistory(today: Date) {
   const month = today.getMonth();
 
   for (let day = 1; day < today.getDate(); day++) {
-    const d = new Date(year, month, day);
-    const date = dateKey(d);
+    const date = dateKey(new Date(year, month, day));
     for (const emp of employees) {
       const job = jobTypes.find((j) => j.id === emp.jobTypeId)!;
       const sup = supervisors.find((s) => s.departmentIds.includes(emp.departmentId));
@@ -184,49 +370,62 @@ function seedHistory(today: Date) {
       const attStatus: AttendanceStatus = r > 0.93 ? "absent" : r > 0.9 ? "leave" : "present";
       attendance[attKey(emp.id, date)] = {
         status: attStatus,
-        markedBy: sup?.name,
+        ...(sup ? { markedBy: sup.name } : {}),
         markedAt: "08:00",
       };
       if (attStatus !== "present") continue;
       for (const time of job.scheduledTimes) {
-        const rr = rand(emp.id + date + time);
-        const completed = rr > 0.14;
+        const completed = rand(emp.id + date + time) > 0.14;
         taskLogs[taskKey(emp.id, date, time)] = completed
-          ? { status: "completed", markedBy: sup?.name, markedAt: time }
-          : { status: "missed" };
+          ? { status: "completed", ...(sup ? { markedBy: sup.name } : {}), markedAt: time }
+          : {
+              status: "missed",
+              remarks: "Task was not completed during the scheduled round.",
+              ...(sup ? { markedBy: sup.name } : {}),
+              markedAt: time,
+            };
       }
     }
   }
 
-  // Today: partial marking, matching the sample log
-  const today_ = dateKey(today);
-  const partial: Array<[string, string]> = [
-    ["e1", "06:00"],
-    ["e1", "10:00"],
-    ["e3", "05:30"],
-    ["e3", "08:00"],
-    ["e3", "11:00"],
-    ["e5", "07:00"],
-    ["e7", "09:00"],
-    ["e10", "08:30"],
+  const todayKey = dateKey(today);
+  const partial: Array<[string, string, TaskStatus, string?]> = [
+    ["e1", "05:30", "completed"],
+    ["e3", "08:00", "needs_redo", "Floor still wet near urinals, sent back."],
+    ["e5", "13:00", "missed", "Bin not emptied, no worker response."],
+    ["e7", "12:00", "completed"],
+    ["e12", "06:30", "completed"],
+    ["e14", "09:00", "completed", "Done for this week's cycle."],
+    ["e15", "07:00", "completed"],
+    ["e16", "09:00", "missed", "Truck delayed, collection pending."],
   ];
-  for (const [empId, time] of partial) {
+  for (const [empId, time, status, remarks] of partial) {
     const emp = employees.find((e) => e.id === empId)!;
     const sup = supervisors.find((s) => s.departmentIds.includes(emp.departmentId));
-    taskLogs[taskKey(empId, today_, time)] = {
-      status: "completed",
-      markedBy: sup?.name,
+    taskLogs[taskKey(empId, todayKey, time)] = {
+      status,
+      ...(remarks ? { remarks } : {}),
+      ...(sup ? { markedBy: sup.name } : {}),
       markedAt: time,
     };
   }
+
   for (const emp of employees) {
     const sup = supervisors.find((s) => s.departmentIds.includes(emp.departmentId));
-    attendance[attKey(emp.id, today_)] = {
+    attendance[attKey(emp.id, todayKey)] = {
       status: emp.id === "e6" ? "absent" : "present",
-      markedBy: sup?.name,
+      ...(emp.id === "e6" ? { remarks: "Informed sick via phone." } : {}),
+      ...(sup ? { markedBy: sup.name } : {}),
       markedAt: "07:45",
     };
   }
+  const sampleAttendanceDate = dateKey(new Date(year, month, 10));
+  attendance[attKey("e9", sampleAttendanceDate)] = {
+    status: "half-day",
+    remarks: "Left early — family emergency.",
+    markedBy: "S. Deshmukh",
+    markedAt: "13:00",
+  };
 
   return { taskLogs, attendance };
 }
