@@ -1,0 +1,1 @@
+- [Bun import setup](bun-import-setup.md) — imported Bun projects may need the lockfile install command rerun before local executable links appear.
