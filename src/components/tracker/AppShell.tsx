@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   BarChart3,
   Building2,
@@ -21,7 +21,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import { useState, type ComponentType, type ReactNode } from "react";
+import { useState, type ComponentType, type MouseEvent, type ReactNode } from "react";
 import { useTracker } from "@/lib/tracker-store";
 import { cn } from "@/lib/utils";
 import { RailOpsMark } from "./RailOpsMark";
@@ -344,6 +344,8 @@ function SidebarGroups({
   onNavigate?: () => void;
   collapsed: boolean;
 }) {
+  const navigate = useNavigate();
+
   return (
     <nav className={cn("space-y-6", collapsed && "space-y-5")} aria-label="Module navigation">
       {groups.map((group) => (
@@ -361,6 +363,18 @@ function SidebarGroups({
             {group.items.map((item) => {
               const Icon = item.icon;
               const hash = item.href.split("#")[1];
+              const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+                onNavigate?.();
+                if (item.href.startsWith("/reports#") && hash) {
+                  event.preventDefault();
+                  void navigate({
+                    to: "/reports",
+                    hash,
+                    hashScrollIntoView: false,
+                    resetScroll: false,
+                  });
+                }
+              };
               const className = cn(
                 "font-medium transition-colors",
                 collapsed
@@ -381,7 +395,7 @@ function SidebarGroups({
                       }
                     : {})}
                   className={className}
-                  onClick={onNavigate}
+                  onClick={handleClick}
                   title={collapsed ? item.label : undefined}
                   aria-label={collapsed ? item.label : undefined}
                 >
