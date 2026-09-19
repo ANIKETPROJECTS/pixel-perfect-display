@@ -35,6 +35,8 @@ pm2 start ecosystem.config.cjs
 
 The PM2 app name is `railsops-workforce-tracker`. To keep it running after a
 server reboot, run `pm2 save` after the first successful start. The current app
-does not require an external database or API credential; keep any future
-server-side secrets in the VPS environment instead of committing them to the
-ecosystem file.
+does not require an external database or API credential. Its seeded demo data
+is stored in `src/lib/tracker-data.ts` and is loaded automatically when no
+browser data exists, so a fresh VPS deployment can run without a database.
+Keep any future server-side secrets in the VPS environment instead of
+committing them to the ecosystem file.

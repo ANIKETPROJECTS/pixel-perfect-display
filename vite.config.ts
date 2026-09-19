@@ -7,6 +7,11 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  // The VPS PM2 process runs the generated Nitro server directly.
+  // Replit development still uses the Vite workflow below.
+  nitro: {
+    preset: "node-server",
+  },
   vite: {
     server: {
       // Replit previews reach Vite through a generated *.replit.dev hostname.
