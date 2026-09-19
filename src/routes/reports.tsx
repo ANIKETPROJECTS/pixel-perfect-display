@@ -644,8 +644,8 @@ function Reports() {
             </div>
           </div>
 
-          <div className="grid items-start gap-4 lg:grid-cols-[minmax(260px,0.75fr)_minmax(0,1.25fr)]">
-            <div className="order-2 grid gap-3 md:grid-cols-2 lg:order-1 lg:grid-cols-1">
+          <div className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2">
               {(["station", "colony"] as ReportGroup[]).map((group) => {
                 const rows = monthly.filter((row) => row.group === group);
                 const assigned = rows.reduce((total, row) => total + row.assigned, 0);
@@ -685,8 +685,8 @@ function Reports() {
               })}
             </div>
 
-            <div className="order-1 lg:order-2 lg:sticky lg:top-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">Ready to export</p>
                 <h3 className="mt-1 font-bold">{groupLabel(hrmsGroup)} · {monthLabel}</h3>
@@ -758,7 +758,7 @@ function Reports() {
                 ])}
               />
             </div>
-          </div>
+            </div>
           </div>
         </section>
       )}
