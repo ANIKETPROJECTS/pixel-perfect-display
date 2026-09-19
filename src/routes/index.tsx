@@ -443,6 +443,8 @@ function DepartmentTaskView({
           const shift = lk.shift(emp.shiftId);
           const attendance = state.attendance[attKey(emp.id, today)];
           const attendanceStatus: AttendanceStatus = attendance?.status ?? "present";
+          const tasksNotRequired =
+            attendanceStatus === "absent" || attendanceStatus === "leave";
           const times = job?.scheduledTimes ?? [];
           const done = times.filter(
             (time) => state.taskLogs[taskKey(emp.id, today, time)]?.status === "completed",
@@ -473,9 +475,11 @@ function DepartmentTaskView({
                       <button
                         key={nextStatus}
                         type="button"
-                        onClick={() =>
-                          setAttendance(emp.id, today, nextStatus, attendance?.remarks)
-                        }
+                        aria-pressed={attendanceStatus === nextStatus}
+                        onClick={() => {
+                          setNoteTask(null);
+                          setAttendance(emp.id, today, nextStatus, attendance?.remarks);
+                        }}
                         className={cn(
                           "min-h-8 rounded-md px-2.5 text-xs font-semibold transition-colors",
                           attendanceStatus === nextStatus
@@ -510,12 +514,16 @@ function DepartmentTaskView({
                     Shift checklist
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {times.length} scheduled rounds · {done} completed
+                    {tasksNotRequired
+                      ? attendanceStatus === "leave"
+                        ? "Not required while on leave"
+                        : "Not required while absent"
+                      : `${times.length} scheduled rounds · ${done} completed`}
                   </p>
                 </div>
                 <button
                   type="button"
-                  disabled={attendanceStatus === "absent" || times.length === 0}
+                  disabled={tasksNotRequired || times.length === 0}
                   onClick={() => {
                     for (const time of times) setTask(emp.id, today, time, "completed");
                   }}
@@ -526,9 +534,18 @@ function DepartmentTaskView({
                 </button>
               </div>
 
-              {attendanceStatus === "absent" ? (
-                <div className="mt-3 rounded-lg border border-danger/20 bg-danger-soft px-3 py-2 text-xs font-medium text-danger">
-                  Absent today — shift tasks are not required.
+              {tasksNotRequired ? (
+                <div
+                  className={cn(
+                    "mt-3 rounded-lg border px-3 py-2 text-xs font-medium",
+                    attendanceStatus === "leave"
+                      ? "border-primary/20 bg-primary/5 text-primary"
+                      : "border-danger/20 bg-danger-soft text-danger",
+                  )}
+                >
+                  {attendanceStatus === "leave"
+                    ? "On leave today — shift tasks are not required."
+                    : "Absent today — shift tasks are not required."}
                 </div>
               ) : (
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
