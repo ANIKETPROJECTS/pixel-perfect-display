@@ -9,6 +9,7 @@ import {
   Clock3,
   FileBarChart,
   LayoutDashboard,
+  LogOut,
   Menu,
   Settings,
   ShieldCheck,
@@ -55,7 +56,7 @@ const supervisorTools: NavItem[] = [
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { role, setRole, supervisorId, setSupervisorId, state } = useTracker();
+  const { role, supervisorId, setSupervisorId, state, authUser, logout } = useTracker();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const visibleAdmin = role === "admin";
@@ -151,15 +152,19 @@ export function AppShell({ children }: { children: ReactNode }) {
                 ))}
               </select>
             )}
-            <select
-              aria-label="Role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as "admin" | "supervisor")}
-              className="h-11 rounded-md border border-input bg-card px-2 text-sm font-medium"
+            <span className="hidden rounded-md border border-border bg-muted px-3 py-2 text-sm font-medium sm:inline-flex">
+              {role === "admin" ? "Admin" : "Supervisor"}
+            </span>
+            <span className="hidden max-w-[220px] truncate text-xs text-muted-foreground lg:inline">
+              {authUser?.email}
+            </span>
+            <button
+              onClick={logout}
+              className="inline-flex min-h-11 items-center gap-1 rounded-md border border-input px-3 text-sm font-semibold"
             >
-              <option value="supervisor">Supervisor</option>
-              <option value="admin">Admin</option>
-            </select>
+              <LogOut className="size-4" aria-hidden />
+              <span className="hidden sm:inline">Sign out</span>
+            </button>
           </div>
         </div>
       </header>

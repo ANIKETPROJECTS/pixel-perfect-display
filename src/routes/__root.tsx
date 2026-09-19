@@ -11,8 +11,9 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { TrackerProvider } from "../lib/tracker-store";
+import { TrackerProvider, useTracker } from "../lib/tracker-store";
 import { AppShell } from "../components/tracker/AppShell";
+import { LoginPage } from "../components/tracker/LoginPage";
 
 function NotFoundComponent() {
   return (
@@ -132,11 +133,29 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <TrackerProvider>
-        <AppShell>
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
-        </AppShell>
+        <AuthenticatedApp />
       </TrackerProvider>
     </QueryClientProvider>
+  );
+}
+
+function AuthenticatedApp() {
+  const { authReady, authUser, login } = useTracker();
+
+  if (!authReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+        Loading secure sign-in…
+      </div>
+    );
+  }
+
+  if (!authUser) return <LoginPage onLogin={login} />;
+
+  return (
+    <AppShell>
+      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+      <Outlet />
+    </AppShell>
   );
 }
