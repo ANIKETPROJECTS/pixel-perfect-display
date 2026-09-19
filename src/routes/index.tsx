@@ -524,7 +524,7 @@ function DepartmentTaskView({
                   onClick={() => {
                     for (const time of times) setTask(emp.id, today, time, "completed");
                   }}
-                  className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-success/30 bg-success-soft px-2.5 text-xs font-semibold text-success-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-green-200 bg-green-50 px-2.5 text-xs font-semibold text-green-800 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <CheckCheck className="size-3.5" aria-hidden />
                   Mark all done
