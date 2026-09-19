@@ -1274,6 +1274,17 @@ function FlaggedWorkLog({
           row.remarks,
           row.markedBy,
         ])}
+        tableClassName="min-w-[1120px]"
+        columnClasses={[
+          "min-w-[100px]",
+          "min-w-[180px]",
+          "min-w-[190px]",
+          "min-w-[240px]",
+          "min-w-[88px]",
+          "min-w-[110px]",
+          "min-w-[320px] whitespace-normal break-words",
+          "min-w-[140px] whitespace-normal break-words",
+        ]}
       />
       {state.audit.length === 0 && rows.length === 0 && (
         <p className="rounded-lg border border-border bg-card p-6 text-center text-sm text-muted-foreground">
@@ -1288,14 +1299,29 @@ function SmallBadge({ children }: { children: React.ReactNode }) {
   return <span className="rounded-full bg-neutral-soft px-2 py-1 text-[11px] font-medium text-muted-foreground">{children}</span>;
 }
 
-function Table({ head, rows }: { head: string[]; rows: string[][] }) {
+function Table({
+  head,
+  rows,
+  tableClassName,
+  columnClasses,
+}: {
+  head: string[];
+  rows: string[][];
+  tableClassName?: string;
+  columnClasses?: string[];
+}) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card">
-      <table className="w-full text-sm">
+      <table className={cn("w-full text-sm", tableClassName)}>
         <thead>
           <tr className="border-b border-border bg-muted/60 text-left">
-            {head.map((heading) => (
-              <th key={heading} className="whitespace-nowrap px-3 py-3 font-semibold">{heading}</th>
+            {head.map((heading, columnIndex) => (
+              <th
+                key={heading}
+                className={cn("whitespace-nowrap px-3 py-3 font-semibold", columnClasses?.[columnIndex])}
+              >
+                {heading}
+              </th>
             ))}
           </tr>
         </thead>
@@ -1310,7 +1336,13 @@ function Table({ head, rows }: { head: string[]; rows: string[][] }) {
             rows.map((row, rowIndex) => (
               <tr key={rowIndex} className="border-b border-border last:border-0">
                 {row.map((cell, cellIndex) => (
-                  <td key={cellIndex} className="max-w-[280px] whitespace-nowrap px-3 py-3 align-top tabular-nums">
+                  <td
+                    key={cellIndex}
+                    className={cn(
+                      "max-w-[280px] whitespace-nowrap px-3 py-3 align-top tabular-nums",
+                      columnClasses?.[cellIndex],
+                    )}
+                  >
                     {cell}
                   </td>
                 ))}
