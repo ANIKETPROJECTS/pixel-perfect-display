@@ -582,8 +582,10 @@ function DepartmentTaskView({
                         <TaskStatusMenu
                           employeeName={emp.name}
                           time={time}
-                          onSelect={(nextStatus) => {
-                            setTask(emp.id, today, time, nextStatus);
+                          currentStatus={log?.status ?? "pending"}
+                          currentRemarks={log?.remarks}
+                          onSave={(nextStatus, remarks) => {
+                            setTask(emp.id, today, time, nextStatus, remarks);
                             setEditingTask(null);
                           }}
                         />
@@ -620,30 +622,38 @@ function DepartmentTaskView({
 function TaskStatusMenu({
   employeeName,
   time,
-  onSelect,
+  currentStatus,
+  currentRemarks,
+  onSave,
 }: {
   employeeName: string;
   time: string;
-  onSelect: (status: TaskStatus) => void;
+  currentStatus: TaskStatus;
+  currentRemarks: string | undefined;
+  onSave: (status: TaskStatus, remarks: string) => void;
 }) {
+  const [status, setStatus] = useState<TaskStatus>(currentStatus);
+  const [remarks, setRemarks] = useState(currentRemarks ?? "");
+
   return (
     <div
       role="menu"
       aria-label={`Status options for ${employeeName} at ${time}`}
-      className="absolute left-0 top-full z-20 mt-1 min-w-[132px] rounded-lg border border-border bg-card p-1.5 shadow-lg"
+      className="absolute left-0 top-full z-20 mt-1 w-[230px] rounded-lg border border-border bg-card p-2 shadow-lg"
     >
       <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        Set status
+        Update {time} status
       </p>
       {(["completed", "missed", "needs_redo"] as const).map((nextStatus) => (
         <button
           key={nextStatus}
           type="button"
           role="menuitem"
-          onClick={() => onSelect(nextStatus)}
+          onClick={() => setStatus(nextStatus)}
           className={cn(
             "flex min-h-9 w-full items-center rounded-md px-2 text-left text-xs font-semibold hover:bg-accent",
-            nextStatus === "completed" && "text-success-foreground",
+            status === nextStatus && "bg-muted",
+            nextStatus === "completed" && "text-green-700",
             nextStatus === "missed" && "text-danger",
             nextStatus === "needs_redo" && "text-orange-700",
           )}
@@ -651,6 +661,21 @@ function TaskStatusMenu({
           {taskStatusLabel[nextStatus]}
         </button>
       ))}
+      <textarea
+        aria-label={`Remark for ${employeeName} at ${time}`}
+        value={remarks}
+        onChange={(event) => setRemarks(event.target.value)}
+        placeholder="Optional note or remark"
+        rows={2}
+        className="mt-2 w-full resize-none rounded-md border border-input bg-card px-2.5 py-2 text-xs"
+      />
+      <button
+        type="button"
+        onClick={() => onSave(status, remarks)}
+        className="mt-2 min-h-9 w-full rounded-md bg-primary px-2.5 text-xs font-semibold text-primary-foreground"
+      >
+        Save status
+      </button>
     </div>
   );
 }
