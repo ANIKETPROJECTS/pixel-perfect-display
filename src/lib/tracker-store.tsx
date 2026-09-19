@@ -27,7 +27,31 @@ import {
 const STORAGE_KEY = "pwt-state-v5-registration-full-details";
 const SECURE_KEY_DB = "pwt-secure-storage";
 const SECURE_KEY_STORE = "keys";
+const AUTH_SESSION_KEY = "pwt-auth-session";
 let persistenceSequence = 0;
+
+export type AuthUser = {
+  id: "admin" | "supervisor";
+  email: string;
+  role: Role;
+  supervisorId?: string;
+};
+
+const AUTH_ACCOUNTS: Array<AuthUser & { passwordHash: string }> = [
+  {
+    id: "admin",
+    email: "admin@platformworkforce.in",
+    role: "admin",
+    passwordHash: "e86f78a8a3caf0b60d8e74e5942aa6d86dc150cd3c03338aef25b7d2d7e3acc7",
+  },
+  {
+    id: "supervisor",
+    email: "supervisor@platformworkforce.in",
+    role: "supervisor",
+    supervisorId: "sup1",
+    passwordHash: "d6db147b2b183c83cb4302b7db31d152a0e05cbc14c4c8009f197a6e48d0a56e",
+  },
+];
 
 type EncryptedPayload = {
   format: "pwt-aes-gcm-v1";
@@ -44,6 +68,14 @@ function bytesToBase64(bytes: Uint8Array) {
 function base64ToBytes(value: string) {
   const binary = atob(value);
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+async function hashPassword(value: string) {
+  if (typeof window === "undefined" || !window.crypto?.subtle) {
+    throw new Error("Secure password verification is unavailable.");
+  }
+  const digest = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 async function getStorageKey() {
@@ -145,10 +177,13 @@ function hydrateState(raw: string): TrackerState {
 interface Ctx {
   state: TrackerState;
   role: Role;
-  setRole: (r: Role) => void;
   supervisorId: string;
   setSupervisorId: (id: string) => void;
   actorName: string;
+  authReady: boolean;
+  authUser: AuthUser | null;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => void;
   today: string;
   now: number;
   toggleTask: (employeeId: string, date: string, time: string) => void;
@@ -183,11 +218,26 @@ const TrackerContext = createContext<Ctx | null>(null);
 
 export function TrackerProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<TrackerState>(() => createInitialState());
-  const [role, setRole] = useState<Role>("supervisor");
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const [supervisorId, setSupervisorId] = useState("sup1");
   const [now, setNow] = useState(0);
   const [hydrated, setHydrated] = useState(false);
   const today = useMemo(() => dateKey(new Date()), []);
+
+  useEffect(() => {
+    try {
+      const session = sessionStorage.getItem(AUTH_SESSION_KEY);
+      const account = AUTH_ACCOUNTS.find((item) => item.id === session);
+      if (account) {
+        const { passwordHash: _passwordHash, ...user } = account;
+        setAuthUser(user);
+        if (user.supervisorId) setSupervisorId(user.supervisorId);
+      }
+    } finally {
+      setAuthReady(true);
+    }
+  }, []);
 
   // hydrate from localStorage after mount (avoids SSR mismatch)
   useEffect(() => {
@@ -226,10 +276,33 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
       });
   }, [hydrated, state]);
 
+  const role = authUser?.role ?? "supervisor";
   const actorName =
     role === "admin"
       ? "Admin"
       : (state.supervisors.find((s) => s.id === supervisorId)?.name ?? "Supervisor");
+
+  const login = useCallback(async (email: string, password: string) => {
+    const account = AUTH_ACCOUNTS.find((item) => item.email === email.trim().toLowerCase());
+    if (!account) return false;
+    try {
+      const passwordHash = await hashPassword(password);
+      if (passwordHash !== account.passwordHash) return false;
+      const { passwordHash: _passwordHash, ...user } = account;
+      sessionStorage.setItem(AUTH_SESSION_KEY, account.id);
+      setAuthUser(user);
+      setSupervisorId(user.supervisorId ?? "sup1");
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    sessionStorage.removeItem(AUTH_SESSION_KEY);
+    setAuthUser(null);
+    setSupervisorId("sup1");
+  }, []);
 
   const log = useCallback(
     (s: TrackerState, what: string): TrackerState => ({
@@ -372,10 +445,13 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   const value: Ctx = {
     state,
     role,
-    setRole,
     supervisorId,
     setSupervisorId,
     actorName,
+    authReady,
+    authUser,
+    login,
+    logout,
     today,
     now,
     toggleTask,
