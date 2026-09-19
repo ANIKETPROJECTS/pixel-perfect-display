@@ -123,7 +123,7 @@ function Reports() {
   const [hrmsGroup, setHrmsGroup] = useState<ReportGroup>("station");
   const activeTab = role === "admin" || tab !== "flagged-work" ? tab : "daily";
   useEffect(() => {
-    const hash = location.hash.slice(1) as ReportTab;
+    const hash = location.hash.replace(/^#/, "") as ReportTab;
     if (["daily", "monthly", "hrms-export", "flagged-work"].includes(hash)) setTab(hash);
   }, [location.hash]);
 
