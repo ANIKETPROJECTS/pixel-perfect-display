@@ -10,7 +10,9 @@ import {
   Clock3,
   Flag,
   Home,
-  MoreHorizontal,
+  NotepadText,
+  RotateCcw,
+  X,
   Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -58,13 +60,6 @@ type DepartmentSummary = {
   flagged: number;
   completion: number;
   attendance: number;
-};
-
-const taskStatusLabel: Record<TaskStatus, string> = {
-  pending: "Pending",
-  completed: "Done",
-  missed: "Missed",
-  needs_redo: "Needs redo",
 };
 
 const attendanceLabel: Record<AttendanceStatus, string> = {
@@ -365,7 +360,7 @@ function DepartmentTaskView({
   const { state, today, now, setTask, setAttendance } = useTracker();
   const lk = useLookups();
   const [filter, setFilter] = useState<Filter>({ kind: "all" });
-  const [editingTask, setEditingTask] = useState<string | null>(null);
+  const [noteTask, setNoteTask] = useState<string | null>(null);
   const dept = lk.dept(departmentId);
   const employees = state.employees.filter((emp) => {
     if (emp.status !== "active" || emp.departmentId !== departmentId) return false;
@@ -548,10 +543,8 @@ function DepartmentTaskView({
                         type="button"
                         onClick={() => {
                           const next = status === "completed" ? "pending" : "completed";
-                          setTask(emp.id, today, time, next);
-                          setEditingTask(null);
+                          setTask(emp.id, today, time, next, log?.remarks);
                         }}
-                        disabled={attendance?.status === "absent"}
                         className={cn(
                           "flex min-h-11 min-w-[74px] items-center justify-center gap-1 rounded-md border px-2 text-sm font-semibold disabled:opacity-40",
                           status === "completed" && "border-success bg-success text-success-foreground",
@@ -572,22 +565,71 @@ function DepartmentTaskView({
                       </button>
                       <button
                         type="button"
-                        aria-label={`Edit ${time} status for ${emp.name}`}
-                        onClick={() => setEditingTask(editingTask === key ? null : key)}
-                        className="inline-flex min-h-11 min-w-9 items-center justify-center rounded-md border border-input text-xs text-muted-foreground hover:bg-accent"
+                        title={`Mark ${time} done`}
+                        aria-label={`Mark ${time} done for ${emp.name}`}
+                        onClick={() => setTask(emp.id, today, time, "completed", log?.remarks)}
+                        className={cn(
+                          "inline-flex min-h-11 min-w-8 items-center justify-center rounded-md border",
+                          log?.status === "completed"
+                            ? "border-success bg-success text-success-foreground"
+                            : "border-success/30 bg-success-soft text-green-700 hover:bg-green-100",
+                        )}
                       >
-                        <MoreHorizontal className="size-4" aria-hidden />
+                        <Check className="size-4" aria-hidden />
                       </button>
-                      {editingTask === key && (
-                        <TaskStatusMenu
+                      <button
+                        type="button"
+                        title={`Mark ${time} missed`}
+                        aria-label={`Mark ${time} missed for ${emp.name}`}
+                        onClick={() => setTask(emp.id, today, time, "missed", log?.remarks)}
+                        className={cn(
+                          "inline-flex min-h-11 min-w-8 items-center justify-center rounded-md border",
+                          log?.status === "missed"
+                            ? "border-danger bg-danger text-danger-foreground"
+                            : "border-danger/30 bg-danger-soft text-danger hover:bg-red-100",
+                        )}
+                      >
+                        <X className="size-4" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        title={`Mark ${time} needs redo`}
+                        aria-label={`Mark ${time} needs redo for ${emp.name}`}
+                        onClick={() => setTask(emp.id, today, time, "needs_redo", log?.remarks)}
+                        className={cn(
+                          "inline-flex min-h-11 min-w-8 items-center justify-center rounded-md border",
+                          log?.status === "needs_redo"
+                            ? "border-orange-500 bg-orange-500 text-white"
+                            : "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100",
+                        )}
+                      >
+                        <RotateCcw className="size-4" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        title={`Add a note to ${time}`}
+                        aria-label={`Add a note to ${time} for ${emp.name}`}
+                        onClick={() => setNoteTask(noteTask === key ? null : key)}
+                        className={cn(
+                          "inline-flex min-h-11 min-w-8 items-center justify-center rounded-md border",
+                          noteTask === key || log?.remarks
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-input text-muted-foreground hover:bg-accent",
+                        )}
+                      >
+                        <NotepadText className="size-4" aria-hidden />
+                      </button>
+                      {noteTask === key && (
+                        <TaskNoteEditor
                           employeeName={emp.name}
                           time={time}
-                          currentStatus={log?.status ?? "pending"}
+                          currentStatus={log?.status ?? (status === "completed" ? "completed" : "pending")}
                           currentRemarks={log?.remarks}
                           onSave={(nextStatus, remarks) => {
                             setTask(emp.id, today, time, nextStatus, remarks);
-                            setEditingTask(null);
+                            setNoteTask(null);
                           }}
+                          onCancel={() => setNoteTask(null)}
                         />
                       )}
                     </div>
@@ -613,7 +655,7 @@ function DepartmentTaskView({
         })}
       </div>
       <p className="text-xs text-muted-foreground">
-        Tap a time to mark it done. Use the menu beside it for Missed or Needs redo.
+        Use the visible task buttons to mark Done, Missed, Needs redo, or add a note.
       </p>
     </section>
   );
