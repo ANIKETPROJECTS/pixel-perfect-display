@@ -491,23 +491,26 @@ function Reports() {
                 )}%`} />
               </div>
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {visibleDailyDepartments.map((summary) => (
-                <DailyDepartmentCard
-                  key={summary.id}
-                  summary={summary}
-                  selected={selectedDailyDeptId === summary.id}
-                  onClick={() => setSelectedDailyDeptId(summary.id)}
-                />
-              ))}
+            <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
+              <div className="order-2 grid gap-3 sm:grid-cols-2 xl:order-1">
+                {visibleDailyDepartments.map((summary) => (
+                  <DailyDepartmentCard
+                    key={summary.id}
+                    summary={summary}
+                    selected={selectedDailyDeptId === summary.id}
+                    onClick={() => setSelectedDailyDeptId(summary.id)}
+                  />
+                ))}
+              </div>
+              <div className="order-1 xl:order-2 xl:sticky xl:top-4">
+                {selectedDailyDepartment && selectedDailyDepartment.group === dailyGroup ? (
+                  <DailyDepartmentDetails summary={selectedDailyDepartment} date={reportDate} />
+                ) : (
+                  <SelectionHint icon={ListChecks} text="Select a department card to open its employee task list." />
+                )}
+              </div>
             </div>
           </div>
-
-          {selectedDailyDepartment && selectedDailyDepartment.group === dailyGroup ? (
-            <DailyDepartmentDetails summary={selectedDailyDepartment} date={reportDate} />
-          ) : (
-            <SelectionHint icon={ListChecks} text="Select a department card to open its employee task list." />
-          )}
         </section>
       )}
 
@@ -579,32 +582,36 @@ function Reports() {
             })}
           </div>
 
-          <div className="rounded-2xl border border-violet-200 bg-violet-50/40 p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <h4 className="font-bold">{groupLabel(monthlyGroup)} department leaderboard</h4>
-                <p className="mt-1 text-xs text-muted-foreground">Click a row to see employee-level monthly results.</p>
+          <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
+            <div className="order-2 rounded-2xl border border-violet-200 bg-violet-50/40 p-4 xl:order-1">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h4 className="font-bold">{groupLabel(monthlyGroup)} department leaderboard</h4>
+                  <p className="mt-1 text-xs text-muted-foreground">Click a row to see employee-level monthly results.</p>
+                </div>
+                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-violet-800">
+                  {visibleMonthlyDepartments.length} departments
+                </span>
               </div>
-              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-violet-800">
-                {visibleMonthlyDepartments.length} departments
-              </span>
+              <div className="space-y-2">
+                {visibleMonthlyDepartments.map((summary) => (
+                  <MonthlyDepartmentRow
+                    key={summary.id}
+                    summary={summary}
+                    selected={selectedMonthlyDeptId === summary.id}
+                    onClick={() => setSelectedMonthlyDeptId(summary.id)}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="space-y-2">
-              {visibleMonthlyDepartments.map((summary) => (
-                <MonthlyDepartmentRow
-                  key={summary.id}
-                  summary={summary}
-                  selected={selectedMonthlyDeptId === summary.id}
-                  onClick={() => setSelectedMonthlyDeptId(summary.id)}
-                />
-              ))}
+            <div className="order-1 xl:order-2 xl:sticky xl:top-4">
+              {selectedMonthlyDepartment && selectedMonthlyDepartment.group === monthlyGroup ? (
+                <MonthlyDepartmentDetails summary={selectedMonthlyDepartment} monthLabel={monthLabel} />
+              ) : (
+                <SelectionHint icon={Users} text="Select a department row to open its monthly employee list." />
+              )}
             </div>
           </div>
-          {selectedMonthlyDepartment && selectedMonthlyDepartment.group === monthlyGroup ? (
-            <MonthlyDepartmentDetails summary={selectedMonthlyDepartment} monthLabel={monthLabel} />
-          ) : (
-            <SelectionHint icon={Users} text="Select a department row to open its monthly employee list." />
-          )}
           <p className="text-xs text-muted-foreground">
             Performance score = average of compliance and attendance percentages.
           </p>
@@ -636,47 +643,48 @@ function Reports() {
             </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            {(["station", "colony"] as ReportGroup[]).map((group) => {
-              const rows = monthly.filter((row) => row.group === group);
-              const assigned = rows.reduce((total, row) => total + row.assigned, 0);
-              const done = rows.reduce((total, row) => total + row.done, 0);
-              const active = hrmsGroup === group;
-              return (
-                <button
-                  key={group}
-                  type="button"
-                  onClick={() => setHrmsGroup(group)}
-                  className={cn(
-                    "rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm",
-                    active
-                      ? group === "colony"
-                        ? "border-orange-300 bg-orange-50 shadow-sm"
-                        : "border-emerald-300 bg-emerald-50 shadow-sm"
-                      : "border-border bg-card",
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <GroupIcon group={group} />
-                      <div>
-                        <p className="font-bold">{groupLabel(group)} HRMS rows</p>
-                        <p className="mt-1 text-xs text-muted-foreground">Selected month · {rows.length} employees</p>
+          <div className="grid items-start gap-4 xl:grid-cols-[minmax(260px,0.75fr)_minmax(0,1.25fr)]">
+            <div className="order-2 grid gap-3 md:grid-cols-2 xl:order-1 xl:grid-cols-1">
+              {(["station", "colony"] as ReportGroup[]).map((group) => {
+                const rows = monthly.filter((row) => row.group === group);
+                const assigned = rows.reduce((total, row) => total + row.assigned, 0);
+                const done = rows.reduce((total, row) => total + row.done, 0);
+                const active = hrmsGroup === group;
+                return (
+                  <button
+                    key={group}
+                    type="button"
+                    onClick={() => setHrmsGroup(group)}
+                    className={cn(
+                      "rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm",
+                      active
+                        ? group === "colony"
+                          ? "border-orange-300 bg-orange-50 shadow-sm"
+                          : "border-emerald-300 bg-emerald-50 shadow-sm"
+                        : "border-border bg-card",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <GroupIcon group={group} />
+                        <div>
+                          <p className="font-bold">{groupLabel(group)} HRMS rows</p>
+                          <p className="mt-1 text-xs text-muted-foreground">Selected month · {rows.length} employees</p>
+                        </div>
                       </div>
+                      <ChevronRight className="size-5 text-muted-foreground" aria-hidden />
                     </div>
-                    <ChevronRight className="size-5 text-muted-foreground" aria-hidden />
-                  </div>
-                  <div className="mt-4 grid grid-cols-3 gap-3">
-                    <MiniStat label="Rows" value={String(rows.length)} />
-                    <MiniStat label="Assigned" value={String(assigned)} />
-                    <MiniStat label="Completed" value={String(done)} />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                    <div className="mt-4 grid grid-cols-3 gap-3">
+                      <MiniStat label="Rows" value={String(rows.length)} />
+                      <MiniStat label="Assigned" value={String(assigned)} />
+                      <MiniStat label="Completed" value={String(done)} />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
 
-          <div className="rounded-2xl border border-border bg-card p-4">
+            <div className="order-1 xl:order-2 xl:sticky xl:top-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">Ready to export</p>
@@ -749,6 +757,7 @@ function Reports() {
                 ])}
               />
             </div>
+          </div>
           </div>
         </section>
       )}
