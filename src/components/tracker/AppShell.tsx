@@ -6,14 +6,16 @@ import {
   CheckSquare,
   ClipboardCheck,
   ClipboardList,
+  CircleHelp,
   Clock3,
   FileBarChart,
-  LayoutDashboard,
   LogOut,
+  LayoutDashboard,
   Menu,
   Settings,
   ShieldCheck,
   UserRoundCog,
+  UserRound,
   Users,
   Wrench,
   X,
@@ -56,13 +58,19 @@ const supervisorTools: NavItem[] = [
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { role, supervisorId, setSupervisorId, state, authUser, logout } = useTracker();
+  const { role, state, authUser, logout } = useTracker();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const visibleAdmin = role === "admin";
   const visibleReporting = visibleAdmin
     ? reporting
     : reporting.filter((item) => item.label !== "Flagged work log");
+  const supervisorName =
+    state.supervisors.find((supervisor) => supervisor.id === authUser?.supervisorId)?.name ??
+    (role === "supervisor" ? "R. Kulkarni" : "Administrator");
+  const profileName = role === "supervisor" ? supervisorName : "Administrator";
 
   const groups = [
     { label: "Operations", items: operations },
@@ -84,9 +92,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex-1 overflow-y-auto px-3 py-4">
           <SidebarGroups groups={groups} isActive={isActive} />
         </div>
-        <p className="border-t border-border px-5 py-3 text-[11px] text-muted-foreground">
-          Railway station operations
-        </p>
+        <SidebarAccount
+          displayName={profileName}
+          role={role}
+          email={authUser?.email}
+          profileOpen={profileOpen}
+          aboutOpen={aboutOpen}
+          onToggleProfile={() => setProfileOpen((open) => !open)}
+          onToggleAbout={() => setAboutOpen((open) => !open)}
+          onLogout={logout}
+        />
       </aside>
 
       {mobileOpen && (
@@ -110,6 +125,19 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="flex-1 overflow-y-auto px-3 py-4">
               <SidebarGroups groups={groups} isActive={isActive} onNavigate={() => setMobileOpen(false)} />
             </div>
+            <SidebarAccount
+              displayName={profileName}
+              role={role}
+              email={authUser?.email}
+              profileOpen={profileOpen}
+              aboutOpen={aboutOpen}
+              onToggleProfile={() => setProfileOpen((open) => !open)}
+              onToggleAbout={() => setAboutOpen((open) => !open)}
+              onLogout={() => {
+                setMobileOpen(false);
+                logout();
+              }}
+            />
           </aside>
         </div>
       )}
@@ -138,33 +166,21 @@ export function AppShell({ children }: { children: ReactNode }) {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            {role === "supervisor" && (
-              <select
-                aria-label="Acting supervisor"
-                value={supervisorId}
-                onChange={(e) => setSupervisorId(e.target.value)}
-                className="h-11 max-w-[140px] rounded-md border border-input bg-card px-2 text-sm"
-              >
-                {state.supervisors.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            <span className="hidden rounded-md border border-border bg-muted px-3 py-2 text-sm font-medium sm:inline-flex">
-              {role === "admin" ? "Admin" : "Supervisor"}
-            </span>
-            <span className="hidden max-w-[220px] truncate text-xs text-muted-foreground lg:inline">
-              {authUser?.email}
-            </span>
-            <button
-              onClick={logout}
-              className="inline-flex min-h-11 items-center gap-1 rounded-md border border-input px-3 text-sm font-semibold"
-            >
-              <LogOut className="size-4" aria-hidden />
-              <span className="hidden sm:inline">Sign out</span>
-            </button>
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-1.5">
+              <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                {profileName
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")
+                  .slice(0, 2)}
+              </span>
+              <div className="hidden text-left sm:block">
+                <p className="max-w-[180px] truncate text-sm font-semibold">{profileName}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {role === "admin" ? "Administrator" : "Supervisor"}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -192,6 +208,73 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         </div>
       </nav>
+    </div>
+  );
+}
+
+function SidebarAccount({
+  displayName,
+  role,
+  email,
+  profileOpen,
+  aboutOpen,
+  onToggleProfile,
+  onToggleAbout,
+  onLogout,
+}: {
+  displayName: string;
+  role: "admin" | "supervisor";
+  email?: string;
+  profileOpen: boolean;
+  aboutOpen: boolean;
+  onToggleProfile: () => void;
+  onToggleAbout: () => void;
+  onLogout: () => void;
+}) {
+  return (
+    <div className="border-t border-border p-3">
+      {profileOpen && (
+        <div className="mb-2 rounded-lg border border-border bg-muted/50 p-3 text-xs">
+          <p className="font-semibold text-foreground">{displayName}</p>
+          <p className="mt-1 text-muted-foreground">{role === "admin" ? "Administrator" : "Supervisor"}</p>
+          {email && <p className="mt-1 truncate text-muted-foreground">{email}</p>}
+        </div>
+      )}
+      {aboutOpen && (
+        <div className="mb-2 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
+          <p className="font-semibold text-foreground">RailsOps Workforce Tracker</p>
+          <p className="mt-1 text-muted-foreground">Railway station workforce and daily operations hub.</p>
+        </div>
+      )}
+      <div className="space-y-1">
+        <button
+          type="button"
+          onClick={onToggleProfile}
+          aria-expanded={profileOpen}
+          className="flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <UserRound className="size-4 shrink-0" aria-hidden />
+          <span>Profile</span>
+        </button>
+        <button
+          type="button"
+          onClick={onToggleAbout}
+          aria-expanded={aboutOpen}
+          className="flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <CircleHelp className="size-4 shrink-0" aria-hidden />
+          <span>About</span>
+        </button>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-danger-soft hover:text-danger"
+        >
+          <LogOut className="size-4 shrink-0" aria-hidden />
+          <span>Logout</span>
+        </button>
+      </div>
+      <p className="mt-3 px-3 text-[11px] text-muted-foreground">Railway station operations</p>
     </div>
   );
 }
