@@ -168,10 +168,19 @@ function Employees() {
   const [draft, setDraft] = useState<Employee | null>(null);
   const [error, setError] = useState("");
   const [revealedId, setRevealedId] = useState<string | null>(null);
+  const [screen, setScreen] = useState<"list" | "form" | "profile">("list");
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
 
   const startNew = () => {
     setError("");
     setDraft(createEmployeeDraft(state));
+    setScreen("form");
+  };
+
+  const startEdit = (employee: Employee) => {
+    setError("");
+    setDraft({ ...employee });
+    setScreen("form");
   };
 
   const save = () => {
@@ -183,8 +192,10 @@ function Employees() {
     }
     upsert("employees", draft);
     recordAudit(`${state.employees.some((employee) => employee.id === draft.id) ? "Updated" : "Registered"} employee ${draft.name}`);
+    setSelectedEmployeeId(draft.id);
     setDraft(null);
     setError("");
+    setScreen("profile");
   };
 
   const toggleReveal = (employee: Employee) => {
@@ -192,6 +203,42 @@ function Employees() {
     setRevealedId(next);
     recordAudit(`${next ? "Viewed" : "Masked"} sensitive registration data for ${employee.name}`);
   };
+
+  if (screen === "form" && draft) {
+    return (
+      <EmployeeRegistrationForm
+        employee={draft}
+        documents={state.employeeDocuments.filter((document) => document.employeeId === draft.id)}
+        state={state}
+        actorName={actorName}
+        error={error}
+        onChange={setDraft}
+        onSave={save}
+        onCancel={() => {
+          setDraft(null);
+          setError("");
+          setScreen("list");
+        }}
+        upsertDocument={(document) => upsert("employeeDocuments", document)}
+        removeDocument={(id) => remove("employeeDocuments", id)}
+      />
+    );
+  }
+
+  const selectedEmployee = state.employees.find((employee) => employee.id === selectedEmployeeId);
+  if (screen === "profile" && selectedEmployee) {
+    return (
+      <EmployeeProfile
+        employee={selectedEmployee}
+        documents={state.employeeDocuments.filter((document) => document.employeeId === selectedEmployee.id)}
+        state={state}
+        actorName={actorName}
+        onBack={() => setScreen("list")}
+        onEdit={() => startEdit(selectedEmployee)}
+        recordAudit={recordAudit}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -209,24 +256,6 @@ function Employees() {
           <UserPlus className="size-4" aria-hidden /> Register employee
         </button>
       </div>
-
-      {draft && (
-        <EmployeeRegistrationForm
-          employee={draft}
-          documents={state.employeeDocuments.filter((document) => document.employeeId === draft.id)}
-          state={state}
-          actorName={actorName}
-          error={error}
-          onChange={setDraft}
-          onSave={save}
-          onCancel={() => {
-            setDraft(null);
-            setError("");
-          }}
-          upsertDocument={(document) => upsert("employeeDocuments", document)}
-          removeDocument={(id) => remove("employeeDocuments", id)}
-        />
-      )}
 
       <div className="space-y-2">
         {state.employees.map((employee) => {
@@ -249,9 +278,15 @@ function Employees() {
                   <CompletenessBadge status={status} />
                   <button
                     onClick={() => {
-                      setError("");
-                      setDraft({ ...employee });
+                      setSelectedEmployeeId(employee.id);
+                      setScreen("profile");
                     }}
+                    className="min-h-10 rounded-md border border-primary/30 px-3 text-xs font-semibold text-primary"
+                  >
+                    View profile
+                  </button>
+                  <button
+                    onClick={() => startEdit(employee)}
                     className="min-h-10 rounded-md border border-input px-3 text-xs font-semibold"
                   >
                     Edit registration
@@ -285,6 +320,177 @@ function Employees() {
       </div>
     </div>
   );
+}
+
+function EmployeeProfile({
+  employee,
+  documents,
+  state,
+  actorName,
+  onBack,
+  onEdit,
+  recordAudit,
+}: {
+  employee: Employee;
+  documents: Array<{
+    id: string;
+    employeeId: string;
+    documentType: EmployeeDocumentType;
+    fileUrl: string;
+    uploadedAt: string;
+    uploadedBy: string;
+    expiryDate?: string;
+  }>;
+  state: TrackerState;
+  actorName: string;
+  onBack: () => void;
+  onEdit: () => void;
+  recordAudit: (what: string) => void;
+}) {
+  const [revealed, setRevealed] = useState(false);
+  const lk = useLookups();
+  const completeness = registrationCompleteness(employee, documents);
+  const supervisor = state.supervisors.find((item) => item.id === employee.supervisorId)?.name ?? "—";
+  const department = lk.dept(employee.departmentId)?.name ?? "—";
+  const job = lk.job(employee.jobTypeId)?.title ?? "—";
+  const shift = lk.shift(employee.shiftId);
+
+  const toggleReveal = () => {
+    const next = !revealed;
+    setRevealed(next);
+    recordAudit(`${next ? "Viewed" : "Masked"} sensitive profile data for ${employee.name}`);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <button onClick={onBack} className="mb-2 inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-primary">
+            <ArrowLeft className="size-4" aria-hidden /> Back to employee list
+          </button>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Employee profile</p>
+          <h3 className="mt-1 text-2xl font-bold">{employee.name}</h3>
+          <p className="text-sm text-muted-foreground">{employee.code} · {employee.hrmsEmployeeId || "HRMS ID pending"}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <CompletenessBadge status={completeness} />
+          <button onClick={onEdit} className="min-h-10 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground">
+            Edit registration
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ProfileSection title="A. Personal details">
+            <ProfileValue label="Full name" value={employee.name} />
+            <ProfileValue label="Father's / husband's name" value={employee.fatherOrHusbandName} />
+            <ProfileValue label="Date of birth" value={employee.dateOfBirth} />
+            <ProfileValue label="Gender" value={readable(employee.gender)} />
+            <ProfileValue label="Blood group" value={employee.bloodGroup} />
+            <ProfileValue label="Marital status" value={readable(employee.maritalStatus)} />
+            <ProfileValue label="Photograph" value={employee.photographFileName} />
+          </ProfileSection>
+
+          <ProfileSection title="B. Contact details">
+            <ProfileValue label="Mobile number" value={employee.mobileNumber ?? employee.phone} />
+            <ProfileValue label="Alternate mobile" value={employee.alternateMobileNumber} />
+            <ProfileValue label="Email" value={employee.email} />
+            <ProfileValue label="Emergency contact" value={`${employee.emergencyContactName ?? "—"} · ${employee.emergencyContactNumber ?? "—"}`} />
+            <ProfileValue label="Current address" value={employee.currentAddress} wide />
+            <ProfileValue label="Permanent address" value={employee.permanentAddress} wide />
+          </ProfileSection>
+
+          <ProfileSection title="C. Identity & statutory compliance">
+            <ProfileValue label="Aadhaar number" value={revealed ? employee.aadhaarNumber : maskSensitive(employee.aadhaarNumber)} />
+            <ProfileValue label="PAN number" value={employee.panNumber} />
+            <ProfileValue label="Voter ID" value={employee.voterId} />
+            <ProfileValue label="Police verification" value={readable(employee.policeVerificationStatus)} />
+            <ProfileValue label="Police certificate number" value={employee.policeVerificationCertificateNumber} />
+            <ProfileValue label="Police verification date" value={employee.policeVerificationDate} />
+            <ProfileValue label="Medical fitness" value={`${readable(employee.medicalFitnessStatus)}${employee.medicalFitnessDate ? ` · ${employee.medicalFitnessDate}` : ""}`} />
+            <ProfileValue label="ESIC number" value={employee.esicNumber} />
+            <ProfileValue label="PF / UAN number" value={employee.pfUanNumber} />
+          </ProfileSection>
+
+          <ProfileSection title="D. Employment details">
+            <ProfileValue label="Employee code" value={employee.code} />
+            <ProfileValue label="HRMS employee ID" value={employee.hrmsEmployeeId} />
+            <ProfileValue label="Department" value={department} />
+            <ProfileValue label="Job type" value={job} />
+            <ProfileValue label="Shift" value={shift ? `${shift.name} (${shift.start}–${shift.end})` : "—"} />
+            <ProfileValue label="Date of joining" value={employee.joiningDate} />
+            <ProfileValue label="Employment type" value={readable(employee.employmentType)} />
+            <ProfileValue label="Reporting supervisor" value={supervisor} />
+            <ProfileValue label="Railway gate pass / ID card" value={employee.gatePassNumber} />
+            <ProfileValue label="Uniform size" value={employee.uniformSize} />
+            <ProfileValue label="Work zone" value={employee.zone} />
+            <ProfileValue label="Status" value={readable(employee.status)} />
+          </ProfileSection>
+
+          <ProfileSection title="E. Bank details">
+            <ProfileValue label="Bank account number" value={revealed ? employee.bankAccountNumber : maskSensitive(employee.bankAccountNumber)} />
+            <ProfileValue label="IFSC code" value={employee.ifscCode} />
+            <ProfileValue label="Bank name & branch" value={employee.bankNameAndBranch} />
+            <ProfileValue label="Account holder name" value={employee.accountHolderName} />
+            {employee.accountHolderName && employee.name && employee.accountHolderName.trim().toLowerCase() !== employee.name.trim().toLowerCase() && (
+              <p className="text-xs text-warning-foreground">Warning: account holder name does not match the employee name.</p>
+            )}
+            <button onClick={toggleReveal} className="mt-2 inline-flex min-h-9 items-center gap-1 rounded-md border border-input px-2 text-xs font-semibold">
+              {revealed ? <EyeOff className="size-3.5" aria-hidden /> : <Eye className="size-3.5" aria-hidden />}
+              {revealed ? "Mask sensitive values" : `Reveal Aadhaar and bank account (${actorName})`}
+            </button>
+          </ProfileSection>
+        </div>
+
+        <section className="mt-4 border-t border-border pt-4">
+          <h4 className="mb-3 font-semibold">F. Submitted documents</h4>
+          <div className="grid gap-2 md:grid-cols-2">
+            {documentTypes.map(({ type, label }) => {
+              const document = documents.find((item) => item.documentType === type);
+              return (
+                <div key={type} className="flex items-start gap-2 rounded-md border border-border p-3">
+                  <FileText className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{label}</p>
+                    <p className="truncate text-xs text-muted-foreground">{document?.fileUrl ?? "Not submitted"}</p>
+                    {document && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Uploaded {document.uploadedAt.slice(0, 10)} by {document.uploadedBy}
+                        {document.expiryDate ? ` · Expires ${document.expiryDate}` : ""}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function ProfileSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border p-3">
+      <h4 className="mb-3 font-semibold">{title}</h4>
+      <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">{children}</div>
+    </section>
+  );
+}
+
+function ProfileValue({ label, value, wide = false }: { label: string; value?: React.ReactNode; wide?: boolean }) {
+  return (
+    <div className={cn(wide && "sm:col-span-2")}>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-0.5 break-words text-sm">{value || "—"}</p>
+    </div>
+  );
+}
+
+function readable(value?: string) {
+  return value ? value.replaceAll("_", " ").replaceAll("-", " ") : "—";
 }
 
 function createEmployeeDraft(state: TrackerState): Employee {
@@ -499,7 +705,7 @@ function EmployeeRegistrationForm({
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={onCancel} className="min-h-10 rounded-md border border-input px-3 text-sm font-semibold">
-            Cancel
+            Back to employee list
           </button>
           <button type="submit" className="inline-flex min-h-10 items-center gap-1 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground">
             <Save className="size-4" aria-hidden /> Save registration
