@@ -531,99 +531,96 @@ function DepartmentTaskView({
                   Absent today — shift tasks are not required.
                 </div>
               ) : (
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {times.map((time) => {
                   const key = taskKey(emp.id, today, time);
                   const log = state.taskLogs[key];
                   const status = effectiveTaskStatus(log?.status, time, true, now);
                   const notDue = now > 0 && minutesOf(time) > now;
+                  const selectedStatus: TaskStatus =
+                    log?.status ?? (status === "upcoming" ? "pending" : status);
                   return (
-                    <div key={time} className="relative flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const next = status === "completed" ? "pending" : "completed";
-                          setTask(emp.id, today, time, next, log?.remarks);
-                        }}
-                        className={cn(
-                          "flex min-h-11 min-w-[74px] items-center justify-center gap-1 rounded-md border px-2 text-sm font-semibold disabled:opacity-40",
-                          status === "completed" && "border-success bg-success text-success-foreground",
-                          status === "missed" && "border-danger bg-danger-soft text-danger",
-                          status === "needs_redo" &&
-                            "border-orange-500 bg-orange-100 text-orange-800",
-                          status === "pending" &&
-                            !notDue &&
-                            "border-warning bg-warning-soft text-warning-foreground",
-                          status === "pending" &&
-                            notDue &&
-                            "border-border bg-neutral-soft text-muted-foreground",
-                        )}
-                      >
-                        {status === "completed" && <Check className="size-4" aria-hidden />}
-                        {status === "needs_redo" && <Flag className="size-4" aria-hidden />}
-                        {time}
-                      </button>
-                      <button
-                        type="button"
-                        title={`Mark ${time} done`}
-                        aria-label={`Mark ${time} done for ${emp.name}`}
-                        onClick={() => setTask(emp.id, today, time, "completed", log?.remarks)}
-                        className={cn(
-                          "inline-flex min-h-11 min-w-8 items-center justify-center rounded-md border",
-                          log?.status === "completed"
-                            ? "border-success bg-success text-success-foreground"
-                            : "border-success/30 bg-success-soft text-green-700 hover:bg-green-100",
-                        )}
-                      >
-                        <Check className="size-4" aria-hidden />
-                      </button>
-                      <button
-                        type="button"
-                        title={`Mark ${time} missed`}
-                        aria-label={`Mark ${time} missed for ${emp.name}`}
-                        onClick={() => setTask(emp.id, today, time, "missed", log?.remarks)}
-                        className={cn(
-                          "inline-flex min-h-11 min-w-8 items-center justify-center rounded-md border",
-                          log?.status === "missed"
-                            ? "border-danger bg-danger text-danger-foreground"
-                            : "border-danger/30 bg-danger-soft text-danger hover:bg-red-100",
-                        )}
-                      >
-                        <X className="size-4" aria-hidden />
-                      </button>
-                      <button
-                        type="button"
-                        title={`Mark ${time} needs redo`}
-                        aria-label={`Mark ${time} needs redo for ${emp.name}`}
-                        onClick={() => setTask(emp.id, today, time, "needs_redo", log?.remarks)}
-                        className={cn(
-                          "inline-flex min-h-11 min-w-8 items-center justify-center rounded-md border",
-                          log?.status === "needs_redo"
-                            ? "border-orange-500 bg-orange-500 text-white"
-                            : "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100",
-                        )}
-                      >
-                        <RotateCcw className="size-4" aria-hidden />
-                      </button>
-                      <button
-                        type="button"
-                        title={`Add a note to ${time}`}
-                        aria-label={`Add a note to ${time} for ${emp.name}`}
-                        onClick={() => setNoteTask(noteTask === key ? null : key)}
-                        className={cn(
-                          "inline-flex min-h-11 min-w-8 items-center justify-center rounded-md border",
-                          noteTask === key || log?.remarks
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-input text-muted-foreground hover:bg-accent",
-                        )}
-                      >
-                        <NotepadText className="size-4" aria-hidden />
-                      </button>
+                    <div key={time} className="rounded-lg border border-border bg-muted/20 p-2.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div
+                          className={cn(
+                            "inline-flex min-h-9 items-center gap-1.5 rounded-md border px-2.5 text-sm font-bold",
+                            selectedStatus === "completed" &&
+                              "border-success bg-success text-success-foreground",
+                            selectedStatus === "missed" && "border-danger bg-danger-soft text-danger",
+                            selectedStatus === "needs_redo" &&
+                              "border-orange-500 bg-orange-100 text-orange-800",
+                            selectedStatus === "pending" &&
+                              !notDue &&
+                              "border-warning bg-warning-soft text-warning-foreground",
+                            selectedStatus === "pending" &&
+                              notDue &&
+                              "border-border bg-neutral-soft text-muted-foreground",
+                          )}
+                        >
+                          {selectedStatus === "completed" && <Check className="size-3.5" aria-hidden />}
+                          {selectedStatus === "missed" && <X className="size-3.5" aria-hidden />}
+                          {selectedStatus === "needs_redo" && (
+                            <Flag className="size-3.5" aria-hidden />
+                          )}
+                          {time}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setTask(emp.id, today, time, "completed", log?.remarks)}
+                            className={cn(
+                              "inline-flex min-h-9 items-center gap-1 rounded-md border px-2 text-xs font-semibold",
+                              selectedStatus === "completed"
+                                ? "border-success bg-success text-success-foreground"
+                                : "border-success/30 bg-success-soft text-green-700 hover:bg-green-100",
+                            )}
+                          >
+                            <Check className="size-3.5" aria-hidden /> Done
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTask(emp.id, today, time, "missed", log?.remarks)}
+                            className={cn(
+                              "inline-flex min-h-9 items-center gap-1 rounded-md border px-2 text-xs font-semibold",
+                              selectedStatus === "missed"
+                                ? "border-danger bg-danger text-danger-foreground"
+                                : "border-danger/30 bg-danger-soft text-danger hover:bg-red-100",
+                            )}
+                          >
+                            <X className="size-3.5" aria-hidden /> Missed
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTask(emp.id, today, time, "needs_redo", log?.remarks)}
+                            className={cn(
+                              "inline-flex min-h-9 items-center gap-1 rounded-md border px-2 text-xs font-semibold",
+                              selectedStatus === "needs_redo"
+                                ? "border-orange-500 bg-orange-500 text-white"
+                                : "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100",
+                            )}
+                          >
+                            <RotateCcw className="size-3.5" aria-hidden /> Redo
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNoteTask(noteTask === key ? null : key)}
+                            className={cn(
+                              "inline-flex min-h-9 items-center gap-1 rounded-md border px-2 text-xs font-semibold",
+                              noteTask === key || log?.remarks
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-input text-muted-foreground hover:bg-accent",
+                            )}
+                          >
+                            <NotepadText className="size-3.5" aria-hidden /> Note
+                          </button>
+                        </div>
+                      </div>
                       {noteTask === key && (
                         <TaskNoteEditor
                           employeeName={emp.name}
                           time={time}
-                          currentStatus={log?.status ?? (status === "completed" ? "completed" : "pending")}
+                          currentStatus={selectedStatus}
                           currentRemarks={log?.remarks}
                           onSave={(nextStatus, remarks) => {
                             setTask(emp.id, today, time, nextStatus, remarks);
@@ -655,69 +652,62 @@ function DepartmentTaskView({
         })}
       </div>
       <p className="text-xs text-muted-foreground">
-        Use the visible task buttons to mark Done, Missed, Needs redo, or add a note.
+        Each task has one clear action row. Use Note only when a supervisor needs to record context.
       </p>
     </section>
   );
 }
 
-function TaskStatusMenu({
+function TaskNoteEditor({
   employeeName,
   time,
   currentStatus,
   currentRemarks,
   onSave,
+  onCancel,
 }: {
   employeeName: string;
   time: string;
   currentStatus: TaskStatus;
   currentRemarks: string | undefined;
   onSave: (status: TaskStatus, remarks: string) => void;
+  onCancel: () => void;
 }) {
-  const [status, setStatus] = useState<TaskStatus>(currentStatus);
   const [remarks, setRemarks] = useState(currentRemarks ?? "");
 
   return (
     <div
-      role="menu"
-      aria-label={`Status options for ${employeeName} at ${time}`}
-      className="absolute left-0 top-full z-20 mt-1 w-[230px] rounded-lg border border-border bg-card p-2 shadow-lg"
+      className="basis-full rounded-lg border border-primary/20 bg-primary/5 p-2"
     >
-      <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        Update {time} status
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">
+        Note for {employeeName} · {time}
       </p>
-      {(["completed", "missed", "needs_redo"] as const).map((nextStatus) => (
-        <button
-          key={nextStatus}
-          type="button"
-          role="menuitem"
-          onClick={() => setStatus(nextStatus)}
-          className={cn(
-            "flex min-h-9 w-full items-center rounded-md px-2 text-left text-xs font-semibold hover:bg-accent",
-            status === nextStatus && "bg-muted",
-            nextStatus === "completed" && "text-green-700",
-            nextStatus === "missed" && "text-danger",
-            nextStatus === "needs_redo" && "text-orange-700",
-          )}
-        >
-          {taskStatusLabel[nextStatus]}
-        </button>
-      ))}
       <textarea
-        aria-label={`Remark for ${employeeName} at ${time}`}
+        autoFocus
+        aria-label={`Note for ${employeeName} at ${time}`}
         value={remarks}
         onChange={(event) => setRemarks(event.target.value)}
-        placeholder="Optional note or remark"
+        placeholder="Type a note or remark"
         rows={2}
-        className="mt-2 w-full resize-none rounded-md border border-input bg-card px-2.5 py-2 text-xs"
+        className="mt-2 min-h-10 w-full resize-none rounded-md border border-input bg-card px-2.5 py-2 text-xs"
       />
-      <button
-        type="button"
-        onClick={() => onSave(status, remarks)}
-        className="mt-2 min-h-9 w-full rounded-md bg-primary px-2.5 text-xs font-semibold text-primary-foreground"
-      >
-        Save status
-      </button>
+      <div className="mt-2 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="min-h-8 rounded-md border border-input bg-card px-2.5 text-xs font-semibold text-muted-foreground"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          disabled={!remarks.trim()}
+          onClick={() => onSave(currentStatus, remarks)}
+          className="min-h-8 rounded-md bg-primary px-2.5 text-xs font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Save note
+        </button>
+      </div>
     </div>
   );
 }
