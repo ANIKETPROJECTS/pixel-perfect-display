@@ -437,7 +437,9 @@ function Reports() {
           ["daily", "Daily compliance"],
           ["monthly", "Monthly performance"],
           ["hrms-export", "HRMS export"],
-          ...(role === "admin" ? [["flagged-work", "Flagged work log"]] : []),
+          ...(role === "admin" || role === "supervisor"
+            ? [["flagged-work", "Flagged work log"]]
+            : []),
         ] as [ReportTab, string][]).map(([value, label]) => (
           <button
             key={value}

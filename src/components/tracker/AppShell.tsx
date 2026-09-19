@@ -56,7 +56,6 @@ const administration: NavItem[] = [
 
 const supervisorTools: NavItem[] = [
   { label: "Employee registration", icon: Users, href: "/admin#employees", to: "/admin" },
-  { label: "Flagged work log", icon: ShieldCheck, href: "/reports#flagged-work", to: "/reports" },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -66,9 +65,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const visibleAdmin = role === "admin";
-  const visibleReporting = visibleAdmin
-    ? reporting
-    : reporting.filter((item) => item.label !== "Flagged work log");
+  const visibleReporting = reporting;
   const supervisorName =
     state.supervisors.find((supervisor) => supervisor.id === authUser?.supervisorId)?.name ??
     (role === "supervisor" ? "R. Kulkarni" : "Administrator");
