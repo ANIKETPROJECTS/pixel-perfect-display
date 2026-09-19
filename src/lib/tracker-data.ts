@@ -2,6 +2,19 @@ export type Role = "admin" | "supervisor";
 export type TaskStatus = "pending" | "completed" | "missed" | "needs_redo";
 export type AttendanceStatus = "present" | "absent" | "half-day" | "leave";
 export type DepartmentGroup = "station" | "colony";
+export type Gender = "male" | "female" | "other";
+export type MaritalStatus = "single" | "married" | "widowed" | "divorced";
+export type PoliceVerificationStatus = "pending" | "verified" | "rejected";
+export type MedicalFitnessStatus = "yes" | "no";
+export type EmploymentType = "permanent" | "contract" | "daily-wage" | "temporary";
+export type EmployeeStatus = "active" | "inactive" | "on_leave" | "terminated";
+export type EmployeeDocumentType =
+  | "aadhaar_front"
+  | "aadhaar_back"
+  | "police_verification"
+  | "medical_certificate"
+  | "address_proof"
+  | "other";
 
 export interface Department {
   id: string;
@@ -37,7 +50,38 @@ export interface Employee {
   phone: string;
   zone: string;
   joiningDate: string;
-  status: "active" | "inactive";
+  status: EmployeeStatus;
+  fatherOrHusbandName?: string;
+  dateOfBirth?: string;
+  gender?: Gender;
+  bloodGroup?: string;
+  maritalStatus?: MaritalStatus;
+  photographFileName?: string;
+  mobileNumber?: string;
+  alternateMobileNumber?: string;
+  email?: string;
+  emergencyContactName?: string;
+  emergencyContactNumber?: string;
+  currentAddress?: string;
+  permanentAddress?: string;
+  aadhaarNumber?: string;
+  panNumber?: string;
+  voterId?: string;
+  policeVerificationStatus?: PoliceVerificationStatus;
+  policeVerificationCertificateNumber?: string;
+  policeVerificationDate?: string;
+  medicalFitnessStatus?: MedicalFitnessStatus;
+  medicalFitnessDate?: string;
+  esicNumber?: string;
+  pfUanNumber?: string;
+  employmentType?: EmploymentType;
+  supervisorId?: string;
+  gatePassNumber?: string;
+  uniformSize?: string;
+  bankAccountNumber?: string;
+  ifscCode?: string;
+  bankNameAndBranch?: string;
+  accountHolderName?: string;
 }
 
 export interface Supervisor {
@@ -45,6 +89,16 @@ export interface Supervisor {
   name: string;
   phone: string;
   departmentIds: string[];
+}
+
+export interface EmployeeDocument {
+  id: string;
+  employeeId: string;
+  documentType: EmployeeDocumentType;
+  fileUrl: string;
+  uploadedAt: string;
+  uploadedBy: string;
+  expiryDate?: string;
 }
 
 export interface TaskLog {
@@ -74,6 +128,7 @@ export interface TrackerState {
   shifts: Shift[];
   employees: Employee[];
   supervisors: Supervisor[];
+  employeeDocuments: EmployeeDocument[];
   taskLogs: Record<string, TaskLog>;
   attendance: Record<string, AttendanceEntry>;
   audit: AuditEntry[];
@@ -348,6 +403,125 @@ export const employees: Employee[] = [
   { id: "e16", code: "EMP-116", hrmsEmployeeId: "HR-8816", name: "Poonam Khedkar", departmentId: "d13", jobTypeId: "j22", shiftId: "s1", phone: "98xxxxxx16", zone: "Railway colony waste area", joiningDate: "2024-07-20", status: "active" },
   { id: "e17", code: "EMP-117", hrmsEmployeeId: "HR-8817", name: "Nitin Salunkhe", departmentId: "d14", jobTypeId: "j23", shiftId: "s1", phone: "98xxxxxx17", zone: "Railway colony drains", joiningDate: "2024-08-02", status: "active" },
   { id: "e18", code: "EMP-118", hrmsEmployeeId: "HR-8818", name: "Sarika Pol", departmentId: "d15", jobTypeId: "j25", shiftId: "s1", phone: "98xxxxxx18", zone: "Railway colony vector control", joiningDate: "2024-08-16", status: "active" },
+];
+
+const completeRegistrationProfile: Partial<Employee> = {
+  fatherOrHusbandName: "Baban Yadav",
+  dateOfBirth: "1992-06-14",
+  gender: "male",
+  bloodGroup: "B+",
+  maritalStatus: "married",
+  photographFileName: "ramesh-yadav.jpg",
+  mobileNumber: "9876543201",
+  emergencyContactName: "Sunita Yadav (Spouse)",
+  emergencyContactNumber: "9876543221",
+  currentAddress: "Near Bus Stand, Guntakal, Andhra Pradesh",
+  permanentAddress: "Near Bus Stand, Guntakal, Andhra Pradesh",
+  aadhaarNumber: "123412344821",
+  policeVerificationStatus: "verified",
+  policeVerificationCertificateNumber: "PV/GTL/2024/0187",
+  policeVerificationDate: "2024-01-05",
+  medicalFitnessStatus: "yes",
+  medicalFitnessDate: "2024-01-10",
+  esicNumber: "1102345678901",
+  pfUanNumber: "101234567890",
+  employmentType: "contract",
+  supervisorId: "sup1",
+  gatePassNumber: "GTL-GP-0456",
+  uniformSize: "L",
+  bankAccountNumber: "123456783210",
+  ifscCode: "SBIN0001234",
+  bankNameAndBranch: "State Bank of India, Guntakal Branch",
+  accountHolderName: "Ramesh Yadav",
+};
+
+export const employeeRegistrationProfiles: Record<string, Partial<Employee>> = {
+  e1: completeRegistrationProfile,
+  e3: {
+    ...completeRegistrationProfile,
+    fatherOrHusbandName: "Mahesh More",
+    dateOfBirth: "1990-04-22",
+    gender: "female",
+    photographFileName: "anita-more.jpg",
+    mobileNumber: "9876543203",
+    emergencyContactName: "Vijay More",
+    emergencyContactNumber: "9876543223",
+    aadhaarNumber: "123412344823",
+    supervisorId: "sup1",
+    gatePassNumber: "GTL-GP-0458",
+    accountHolderName: "Anita More",
+  },
+  e7: {
+    fatherOrHusbandName: "Dattatray Kamble",
+    dateOfBirth: "1991-09-18",
+    gender: "female",
+    photographFileName: "meena-kamble.jpg",
+    mobileNumber: "9876543207",
+    emergencyContactName: "Ravi Kamble",
+    emergencyContactNumber: "9876543227",
+    currentAddress: "Railway quarters, Guntakal",
+    aadhaarNumber: "123412344827",
+    policeVerificationStatus: "pending",
+    medicalFitnessStatus: "no",
+    employmentType: "contract",
+    supervisorId: "sup1",
+    gatePassNumber: "GTL-GP-0462",
+  },
+  e12: {
+    fatherOrHusbandName: "Mohan Chavan",
+    dateOfBirth: "1989-12-03",
+    gender: "female",
+    photographFileName: "rekha-chavan.jpg",
+    mobileNumber: "9876543212",
+    emergencyContactName: "Sanjay Chavan",
+    emergencyContactNumber: "9876543232",
+    currentAddress: "Old railway colony, Guntakal",
+    aadhaarNumber: "123412344832",
+    policeVerificationStatus: "rejected",
+    medicalFitnessStatus: "yes",
+    medicalFitnessDate: "2024-06-05",
+    employmentType: "contract",
+    supervisorId: "sup1",
+    gatePassNumber: "GTL-GP-0467",
+  },
+  e15: {
+    fatherOrHusbandName: "Raghunath Pandit",
+    gender: "male",
+    mobileNumber: "9876543215",
+    policeVerificationStatus: "pending",
+    medicalFitnessStatus: "no",
+    employmentType: "contract",
+    supervisorId: "sup1",
+  },
+};
+
+export const employeeDocuments: EmployeeDocument[] = [
+  ...(["aadhaar_front", "aadhaar_back", "police_verification", "medical_certificate", "address_proof"] as const).map(
+    (documentType) => ({
+      id: `doc-e1-${documentType}`,
+      employeeId: "e1",
+      documentType,
+      fileUrl: `ramesh-yadav-${documentType}.pdf`,
+      uploadedAt: "2024-01-12T09:00:00.000Z",
+      uploadedBy: "Admin",
+    }),
+  ),
+  ...(["aadhaar_front", "aadhaar_back", "police_verification", "medical_certificate", "address_proof"] as const).map(
+    (documentType) => ({
+      id: `doc-e3-${documentType}`,
+      employeeId: "e3",
+      documentType,
+      fileUrl: `anita-more-${documentType}.pdf`,
+      uploadedAt: "2024-01-22T09:00:00.000Z",
+      uploadedBy: "Admin",
+    }),
+  ),
+  { id: "doc-e7-aadhaar_front", employeeId: "e7", documentType: "aadhaar_front", fileUrl: "meena-kamble-aadhaar.pdf", uploadedAt: "2024-01-18T09:00:00.000Z", uploadedBy: "Admin" },
+  { id: "doc-e7-address_proof", employeeId: "e7", documentType: "address_proof", fileUrl: "meena-kamble-address.pdf", uploadedAt: "2024-01-18T09:00:00.000Z", uploadedBy: "Admin" },
+  { id: "doc-e12-aadhaar_front", employeeId: "e12", documentType: "aadhaar_front", fileUrl: "rekha-chavan-aadhaar.pdf", uploadedAt: "2024-06-08T09:00:00.000Z", uploadedBy: "Admin" },
+  { id: "doc-e12-aadhaar_back", employeeId: "e12", documentType: "aadhaar_back", fileUrl: "rekha-chavan-aadhaar-back.pdf", uploadedAt: "2024-06-08T09:00:00.000Z", uploadedBy: "Admin" },
+  { id: "doc-e12-medical_certificate", employeeId: "e12", documentType: "medical_certificate", fileUrl: "rekha-chavan-medical.pdf", uploadedAt: "2024-06-08T09:00:00.000Z", uploadedBy: "Admin" },
+  { id: "doc-e15-aadhaar_front", employeeId: "e15", documentType: "aadhaar_front", fileUrl: "ajay-pandit-aadhaar.pdf", uploadedAt: "2024-07-12T09:00:00.000Z", uploadedBy: "Admin" },
 ];
 
 export const supervisors: Supervisor[] = [

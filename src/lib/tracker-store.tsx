@@ -11,6 +11,8 @@ import {
   attKey,
   createInitialState,
   dateKey,
+  type EmployeeDocument,
+  employeeDocuments,
   minutesOf,
   taskKey,
   type AttendanceStatus,
@@ -24,7 +26,7 @@ import {
   type TrackerState,
 } from "./tracker-data";
 
-const STORAGE_KEY = "pwt-state-v4-one-supervisor";
+const STORAGE_KEY = "pwt-state-v5-registration";
 
 function hydrateState(raw: string): TrackerState {
   const parsed = JSON.parse(raw) as Partial<TrackerState>;
@@ -34,6 +36,7 @@ function hydrateState(raw: string): TrackerState {
     ...parsed,
     taskLogs: { ...seed.taskLogs, ...(parsed.taskLogs ?? {}) },
     attendance: { ...seed.attendance, ...(parsed.attendance ?? {}) },
+    employeeDocuments: parsed.employeeDocuments ?? seed.employeeDocuments,
     audit: parsed.audit ?? [],
   };
 
@@ -68,9 +71,10 @@ interface Ctx {
     item: TrackerState[K][number],
   ) => void;
   remove: (
-    key: "departments" | "jobTypes" | "shifts" | "employees" | "supervisors",
+    key: "departments" | "jobTypes" | "shifts" | "employees" | "supervisors" | "employeeDocuments",
     id: string,
   ) => void;
+  recordAudit: (what: string) => void;
   reset: () => void;
 }
 
@@ -242,6 +246,13 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     [log],
   );
 
+  const recordAudit = useCallback(
+    (what: string) => {
+      setState((s) => log(s, what));
+    },
+    [log],
+  );
+
   const reset = useCallback(() => setState(createInitialState()), []);
 
   const value: Ctx = {
@@ -258,6 +269,7 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
     setAttendance,
     upsert,
     remove,
+    recordAudit,
     reset,
   };
 
