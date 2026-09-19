@@ -50,6 +50,10 @@ const administration: NavItem[] = [
   { label: "Audit trail", icon: ClipboardList, href: "/admin#audit", to: "/admin" },
 ];
 
+const supervisorTools: NavItem[] = [
+  { label: "Employee registration", icon: Users, href: "/admin#employees", to: "/admin" },
+];
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { role, setRole, supervisorId, setSupervisorId, state } = useTracker();
   const location = useLocation();
@@ -62,6 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const groups = [
     { label: "Operations", items: operations },
     { label: "Reporting", items: visibleReporting },
+    ...(role === "supervisor" ? [{ label: "Supervisor", items: supervisorTools }] : []),
     ...(visibleAdmin ? [{ label: "Administration", items: administration }] : []),
   ];
 
@@ -123,7 +128,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             </p>
             <h1 className="truncate text-base font-semibold leading-tight">
               {location.pathname === "/admin"
-                ? "Administration"
+                ? role === "admin"
+                  ? "Administration"
+                  : "Supervisor workspace"
                 : location.pathname === "/reports"
                   ? "Reports & exports"
                   : "Today's operations"}

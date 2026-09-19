@@ -654,8 +654,12 @@ export function createInitialState(today = new Date()): TrackerState {
     departments,
     jobTypes,
     shifts,
-    employees,
+    employees: employees.map((employee) => ({
+      ...employee,
+      ...(employeeRegistrationProfiles[employee.id] ?? {}),
+    })),
     supervisors,
+    employeeDocuments,
     taskLogs,
     attendance,
     audit: [],

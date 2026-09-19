@@ -11,8 +11,6 @@ import {
   attKey,
   createInitialState,
   dateKey,
-  type EmployeeDocument,
-  employeeDocuments,
   minutesOf,
   taskKey,
   type AttendanceStatus,
@@ -27,6 +25,107 @@ import {
 } from "./tracker-data";
 
 const STORAGE_KEY = "pwt-state-v5-registration";
+const SECURE_KEY_DB = "pwt-secure-storage";
+const SECURE_KEY_STORE = "keys";
+let persistenceSequence = 0;
+
+type EncryptedPayload = {
+  format: "pwt-aes-gcm-v1";
+  iv: string;
+  data: string;
+};
+
+function bytesToBase64(bytes: Uint8Array) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function base64ToBytes(value: string) {
+  const binary = atob(value);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+async function getStorageKey() {
+  if (typeof window === "undefined" || !window.crypto?.subtle || !window.indexedDB) {
+    throw new Error("Secure browser storage is unavailable.");
+  }
+  return new Promise<CryptoKey>((resolve, reject) => {
+    const request = window.indexedDB.open(SECURE_KEY_DB, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(SECURE_KEY_STORE);
+    };
+    request.onerror = () => reject(request.error ?? new Error("Could not open secure storage."));
+    request.onsuccess = () => {
+      const db = request.result;
+      const lookup = db.transaction(SECURE_KEY_STORE, "readonly").objectStore(SECURE_KEY_STORE).get("state");
+      lookup.onerror = () => {
+        db.close();
+        reject(lookup.error ?? new Error("Could not read secure storage key."));
+      };
+      lookup.onsuccess = async () => {
+        if (lookup.result) {
+          db.close();
+          resolve(lookup.result as CryptoKey);
+          return;
+        }
+        try {
+          const key = await window.crypto.subtle.generateKey(
+            { name: "AES-GCM", length: 256 },
+            false,
+            ["encrypt", "decrypt"],
+          );
+          const write = db.transaction(SECURE_KEY_STORE, "readwrite");
+          write.objectStore(SECURE_KEY_STORE).put(key, "state");
+          write.oncomplete = () => {
+            db.close();
+            resolve(key);
+          };
+          write.onerror = () => {
+            db.close();
+            reject(write.error ?? new Error("Could not save secure storage key."));
+          };
+        } catch (error) {
+          db.close();
+          reject(error);
+        }
+      };
+    };
+  });
+}
+
+async function encryptState(value: string) {
+  const key = await getStorageKey();
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const data = await window.crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    new TextEncoder().encode(value),
+  );
+  const payload: EncryptedPayload = {
+    format: "pwt-aes-gcm-v1",
+    iv: bytesToBase64(iv),
+    data: bytesToBase64(new Uint8Array(data)),
+  };
+  return JSON.stringify(payload);
+}
+
+async function decryptState(raw: string) {
+  let payload: EncryptedPayload;
+  try {
+    payload = JSON.parse(raw) as EncryptedPayload;
+  } catch {
+    return raw;
+  }
+  if (payload.format !== "pwt-aes-gcm-v1") return raw;
+  const key = await getStorageKey();
+  const data = await window.crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: base64ToBytes(payload.iv) },
+    key,
+    base64ToBytes(payload.data),
+  );
+  return new TextDecoder().decode(data);
+}
 
 function hydrateState(raw: string): TrackerState {
   const parsed = JSON.parse(raw) as Partial<TrackerState>;
@@ -66,7 +165,9 @@ interface Ctx {
     status: AttendanceStatus,
     remarks?: string,
   ) => void;
-  upsert: <K extends "departments" | "jobTypes" | "shifts" | "employees" | "supervisors">(
+  upsert: <
+    K extends "departments" | "jobTypes" | "shifts" | "employees" | "supervisors" | "employeeDocuments"
+  >(
     key: K,
     item: TrackerState[K][number],
   ) => void;
@@ -85,32 +186,45 @@ export function TrackerProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role>("supervisor");
   const [supervisorId, setSupervisorId] = useState("sup1");
   const [now, setNow] = useState(0);
+  const [hydrated, setHydrated] = useState(false);
   const today = useMemo(() => dateKey(new Date()), []);
 
   // hydrate from localStorage after mount (avoids SSR mismatch)
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setState(hydrateState(raw));
-    } catch {
-      /* ignore */
-    }
+    let mounted = true;
+    void (async () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw && mounted) setState(hydrateState(await decryptState(raw)));
+      } catch (error) {
+        console.warn("Saved tracker data could not be decrypted; starting with the demo state.", error);
+      } finally {
+        if (mounted) setHydrated(true);
+      }
+    })();
     const d = new Date();
     setNow(d.getHours() * 60 + d.getMinutes());
     const t = setInterval(() => {
       const n = new Date();
       setNow(n.getHours() * 60 + n.getMinutes());
     }, 60000);
-    return () => clearInterval(t);
+    return () => {
+      mounted = false;
+      clearInterval(t);
+    };
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-      /* ignore */
-    }
-  }, [state]);
+    if (!hydrated) return;
+    const sequence = ++persistenceSequence;
+    void encryptState(JSON.stringify(state))
+      .then((encrypted) => {
+        if (sequence === persistenceSequence) localStorage.setItem(STORAGE_KEY, encrypted);
+      })
+      .catch((error) => {
+        console.warn("Tracker data was not persisted because secure storage is unavailable.", error);
+      });
+  }, [hydrated, state]);
 
   const actorName =
     role === "admin"
