@@ -491,8 +491,8 @@ function Reports() {
                 )}%`} />
               </div>
             </div>
-            <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
-              <div className="order-2 grid gap-3 sm:grid-cols-2 xl:order-1">
+            <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
+              <div className="order-2 grid gap-3 sm:grid-cols-2 lg:order-1">
                 {visibleDailyDepartments.map((summary) => (
                   <DailyDepartmentCard
                     key={summary.id}
@@ -502,7 +502,7 @@ function Reports() {
                   />
                 ))}
               </div>
-              <div className="order-1 xl:order-2 xl:sticky xl:top-4">
+              <div className="order-1 lg:order-2 lg:sticky lg:top-4">
                 {selectedDailyDepartment && selectedDailyDepartment.group === dailyGroup ? (
                   <DailyDepartmentDetails summary={selectedDailyDepartment} date={reportDate} />
                 ) : (
@@ -582,8 +582,8 @@ function Reports() {
             })}
           </div>
 
-          <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
-            <div className="order-2 rounded-2xl border border-violet-200 bg-violet-50/40 p-4 xl:order-1">
+          <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
+            <div className="order-2 rounded-2xl border border-violet-200 bg-violet-50/40 p-4 lg:order-1">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <h4 className="font-bold">{groupLabel(monthlyGroup)} department leaderboard</h4>
@@ -604,7 +604,7 @@ function Reports() {
                 ))}
               </div>
             </div>
-            <div className="order-1 xl:order-2 xl:sticky xl:top-4">
+            <div className="order-1 lg:order-2 lg:sticky lg:top-4">
               {selectedMonthlyDepartment && selectedMonthlyDepartment.group === monthlyGroup ? (
                 <MonthlyDepartmentDetails summary={selectedMonthlyDepartment} monthLabel={monthLabel} />
               ) : (
@@ -643,8 +643,8 @@ function Reports() {
             </div>
           </div>
 
-          <div className="grid items-start gap-4 xl:grid-cols-[minmax(260px,0.75fr)_minmax(0,1.25fr)]">
-            <div className="order-2 grid gap-3 md:grid-cols-2 xl:order-1 xl:grid-cols-1">
+          <div className="grid items-start gap-4 lg:grid-cols-[minmax(260px,0.75fr)_minmax(0,1.25fr)]">
+            <div className="order-2 grid gap-3 md:grid-cols-2 lg:order-1 lg:grid-cols-1">
               {(["station", "colony"] as ReportGroup[]).map((group) => {
                 const rows = monthly.filter((row) => row.group === group);
                 const assigned = rows.reduce((total, row) => total + row.assigned, 0);
@@ -684,7 +684,7 @@ function Reports() {
               })}
             </div>
 
-            <div className="order-1 xl:order-2 xl:sticky xl:top-4">
+            <div className="order-1 lg:order-2 lg:sticky lg:top-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">Ready to export</p>
