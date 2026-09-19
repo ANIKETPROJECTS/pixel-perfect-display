@@ -1,4 +1,4 @@
-import { createFileRoute, useLocation } from "@tanstack/react-router";
+import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { CalendarDays, Download, Filter, Printer, Search, ShieldAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { attKey, dateKey, taskKey, type TaskStatus } from "@/lib/tracker-data";
@@ -39,6 +39,7 @@ function Reports() {
   const { state, today, now, role } = useTracker();
   const lk = useLookups();
   const location = useLocation();
+  const navigate = useNavigate({ from: "/reports" });
   const [tab, setTab] = useState<ReportTab>("daily");
   const [reportDate, setReportDate] = useState(today);
   const [reportMonth, setReportMonth] = useState(today.slice(0, 7));
@@ -237,7 +238,11 @@ function Reports() {
 
   const changeTab = (next: ReportTab) => {
     setTab(next);
-    if (typeof window !== "undefined") window.location.hash = next;
+    void navigate({
+      hash: next,
+      hashScrollIntoView: false,
+      resetScroll: false,
+    });
   };
 
   return (

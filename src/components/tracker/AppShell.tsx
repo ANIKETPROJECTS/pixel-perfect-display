@@ -360,6 +360,7 @@ function SidebarGroups({
           <div className="space-y-1">
             {group.items.map((item) => {
               const Icon = item.icon;
+              const hash = item.href.split("#")[1];
               const className = cn(
                 "font-medium transition-colors",
                 collapsed
@@ -373,7 +374,12 @@ function SidebarGroups({
                 <Link
                   key={item.label}
                   to={item.to}
-                  href={item.href}
+                  {...(hash
+                    ? {
+                        hash,
+                        ...(item.href.startsWith("/reports#") ? { hashScrollIntoView: false } : {}),
+                      }
+                    : {})}
                   className={className}
                   onClick={onNavigate}
                   title={collapsed ? item.label : undefined}
