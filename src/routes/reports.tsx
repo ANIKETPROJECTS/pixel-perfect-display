@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Download, Filter, Printer, Search, ShieldAlert } from "lucide-react";
+import { createFileRoute, useLocation } from "@tanstack/react-router";
+import { CalendarDays, Download, Filter, Printer, Search, ShieldAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { attKey, dateKey, taskKey, type TaskStatus } from "@/lib/tracker-data";
-import { useLookups, useTracker } from "@/lib/tracker-store";
+import { effectiveTaskStatus, useLookups, useTracker } from "@/lib/tracker-store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/reports")({
@@ -36,14 +36,17 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
 }
 
 function Reports() {
-  const { state, today, role } = useTracker();
+  const { state, today, now, role } = useTracker();
   const lk = useLookups();
+  const location = useLocation();
   const [tab, setTab] = useState<ReportTab>("daily");
+  const [reportDate, setReportDate] = useState(today);
+  const [reportMonth, setReportMonth] = useState(today.slice(0, 7));
   const activeTab = role === "admin" || tab !== "flagged-work" ? tab : "daily";
   useEffect(() => {
-    const hash = window.location.hash.slice(1) as ReportTab;
+    const hash = location.hash.slice(1) as ReportTab;
     if (["daily", "monthly", "hrms-export", "flagged-work"].includes(hash)) setTab(hash);
-  }, []);
+  }, [location.hash]);
 
   const daily = useMemo(
     () =>
@@ -51,22 +54,33 @@ function Reports() {
         .filter((employee) => employee.status === "active")
         .map((employee) => {
           const times = lk.job(employee.jobTypeId)?.scheduledTimes ?? [];
-          const logs = times.map((time) => state.taskLogs[taskKey(employee.id, today, time)]);
-          const done = logs.filter((log) => log?.status === "completed").length;
-          const missed = logs.filter((log) => log?.status === "missed").length;
-          const redo = logs.filter((log) => log?.status === "needs_redo").length;
+          const attendance = state.attendance[attKey(employee.id, reportDate)];
+          const tasksRequired = attendance?.status !== "absent" && attendance?.status !== "leave";
+          const statuses = tasksRequired
+            ? times.map((time) =>
+                effectiveTaskStatus(
+                  state.taskLogs[taskKey(employee.id, reportDate, time)]?.status,
+                  time,
+                  reportDate === today,
+                  now,
+                ),
+              )
+            : [];
+          const done = statuses.filter((status) => status === "completed").length;
+          const missed = statuses.filter((status) => status === "missed").length;
+          const redo = statuses.filter((status) => status === "needs_redo").length;
           return {
             emp: employee,
             dept: lk.dept(employee.departmentId)?.name ?? "",
-            assigned: times.length,
+            assigned: statuses.length,
             done,
             missed,
             redo,
-            compliance: pct(done, times.length),
-            attendance: state.attendance[attKey(employee.id, today)]?.status ?? "—",
+            compliance: pct(done, statuses.length),
+            attendance: attendance?.status ?? "—",
           };
         }),
-    [lk, state, today],
+    [lk, now, reportDate, state, today],
   );
 
   const byDept = useMemo(() => {
@@ -84,9 +98,14 @@ function Reports() {
   }, [daily]);
 
   const monthly = useMemo(() => {
-    const now = new Date();
-    const days = Array.from({ length: now.getDate() }, (_, index) =>
-      dateKey(new Date(now.getFullYear(), now.getMonth(), index + 1)),
+    const [year, month] = reportMonth.split("-").map(Number);
+    const selectedYear = year || Number(today.slice(0, 4));
+    const selectedMonth = month || Number(today.slice(5, 7));
+    const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+    const isCurrentMonth = reportMonth === today.slice(0, 7);
+    const dayCount = isCurrentMonth ? Number(today.slice(8, 10)) : daysInMonth;
+    const days = Array.from({ length: dayCount }, (_, index) =>
+      dateKey(new Date(selectedYear, selectedMonth - 1, index + 1)),
     );
     return state.employees
       .filter((employee) => employee.status === "active")
@@ -102,11 +121,17 @@ function Reports() {
           if (attendance === "present") present += 1;
           else if (attendance === "absent") absent += 1;
           else if (attendance === "leave" || attendance === "half-day") leave += 1;
-          if (attendance !== "present") continue;
-          assigned += times.length;
-          done += times.filter(
-            (time) => state.taskLogs[taskKey(employee.id, date, time)]?.status === "completed",
-          ).length;
+            if (attendance === "absent" || attendance === "leave") continue;
+            assigned += times.length;
+            done += times.filter((time) => {
+              const status = effectiveTaskStatus(
+                state.taskLogs[taskKey(employee.id, date, time)]?.status,
+                time,
+                date === today,
+                now,
+              );
+              return status === "completed";
+            }).length;
         }
         const compliance = pct(done, assigned);
         const attendance = pct(present, days.length);
@@ -124,9 +149,9 @@ function Reports() {
           score: Math.round(((compliance + attendance) / 2) * 10) / 10,
         };
       });
-  }, [lk, state]);
+  }, [lk, now, reportMonth, state, today]);
 
-  const monthLabel = new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  const monthLabel = formatMonthLabel(reportMonth);
 
   const hrmsRows = useMemo(
     () =>
@@ -146,6 +171,42 @@ function Reports() {
       ]),
     [monthly, monthLabel],
   );
+
+  const reportCsv = activeTab === "monthly"
+    ? {
+        filename: `monthly-performance-${reportMonth}.csv`,
+        rows: [
+          ["Employee", "Code", "Department", "Days worked", "Tasks completed", "Tasks assigned", "Compliance %", "Attendance %", "Score %"],
+          ...monthly.map((row) => [
+            row.emp.name,
+            row.emp.code,
+            row.dept,
+            row.daysWorked,
+            row.done,
+            row.assigned,
+            `${row.compliance}%`,
+            `${row.attendance}%`,
+            `${row.score}%`,
+          ]),
+        ],
+      }
+    : {
+        filename: `daily-compliance-${reportDate}.csv`,
+        rows: [
+          ["Code", "Name", "Department", "Assigned", "Completed", "Missed", "Needs Redo", "Compliance %", "Attendance"],
+          ...daily.map((row) => [
+            row.emp.code,
+            row.emp.name,
+            row.dept,
+            row.assigned,
+            row.done,
+            row.missed,
+            row.redo,
+            row.compliance,
+            row.attendance,
+          ]),
+        ],
+      };
 
   const flagged = useMemo(
     () =>
@@ -176,7 +237,7 @@ function Reports() {
 
   const changeTab = (next: ReportTab) => {
     setTab(next);
-    if (typeof window !== "undefined") window.history.replaceState(null, "", `/reports#${next}`);
+    if (typeof window !== "undefined") window.location.hash = next;
   };
 
   return (
@@ -214,25 +275,7 @@ function Reports() {
       {(activeTab === "daily" || activeTab === "monthly") && (
         <div className="flex flex-wrap justify-end gap-2">
           <button
-            onClick={() =>
-              downloadCsv(
-                `daily-compliance-${today}.csv`,
-                [
-                  ["Code", "Name", "Department", "Assigned", "Completed", "Missed", "Needs Redo", "Compliance %", "Attendance"],
-                  ...daily.map((row) => [
-                    row.emp.code,
-                    row.emp.name,
-                    row.dept,
-                    row.assigned,
-                    row.done,
-                    row.missed,
-                    row.redo,
-                    row.compliance,
-                    row.attendance,
-                  ]),
-                ],
-              )
-            }
+            onClick={() => downloadCsv(reportCsv.filename, reportCsv.rows)}
             className="inline-flex min-h-11 items-center gap-1 rounded-md border border-input bg-card px-3 text-sm font-medium"
           >
             <Download className="size-4" aria-hidden /> CSV
@@ -249,7 +292,22 @@ function Reports() {
       {activeTab === "daily" && (
         <>
           <section className="space-y-3" id="daily">
-            <h3 className="text-sm font-semibold">Department-wise · {today}</h3>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold">
+                  Daily compliance · {formatDateLabel(reportDate)}
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Choose any past date to review recorded attendance and task outcomes.
+                </p>
+              </div>
+              <ReportDatePicker
+                label="Report date"
+                value={reportDate}
+                max={today}
+                onChange={setReportDate}
+              />
+            </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {byDept.map(([name, value]) => (
                 <div key={name} className="rounded-xl border border-border bg-card p-4">
@@ -284,7 +342,20 @@ function Reports() {
 
       {activeTab === "monthly" && (
         <section className="space-y-3" id="monthly">
-          <h3 className="text-sm font-semibold">Monthly performance · {monthLabel}</h3>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold">Monthly performance · {monthLabel}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Review attendance, task completion, and performance scores for the selected month.
+              </p>
+            </div>
+            <ReportMonthPicker
+              label="Performance month"
+              value={reportMonth}
+              max={today.slice(0, 7)}
+              onChange={setReportMonth}
+            />
+          </div>
           <Table
             head={["Employee", "Department", "Days", "Tasks", "Compliance", "Attendance", "Score"]}
             rows={monthly.map((row) => [
@@ -306,14 +377,24 @@ function Reports() {
       {activeTab === "hrms-export" && (
         <section className="space-y-4" id="hrms-export">
           <div className="rounded-xl border border-border bg-card p-4">
-            <h3 className="font-semibold">HRMS export</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Export the current month’s workforce summary in the HRMS-ready column structure.
-            </p>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="font-semibold">HRMS export</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Export the selected month’s workforce summary in the HRMS-ready column structure.
+                </p>
+              </div>
+              <ReportMonthPicker
+                label="Export month"
+                value={reportMonth}
+                max={today.slice(0, 7)}
+                onChange={setReportMonth}
+              />
+            </div>
             <button
               onClick={() =>
                 downloadCsv(
-                  `hrms-workforce-${today}.csv`,
+                  `hrms-workforce-${reportMonth}.csv`,
                   [
                     [
                       "employee_code",
@@ -373,6 +454,79 @@ function Reports() {
 
       {activeTab === "flagged-work" && role === "admin" && <FlaggedWorkLog rows={flagged} />}
     </div>
+  );
+}
+
+function formatDateLabel(value: string) {
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+}
+
+function formatMonthLabel(value: string) {
+  const [year, month] = value.split("-").map(Number);
+  const date = new Date(year || 0, (month || 1) - 1, 1);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+}
+
+function ReportDatePicker({
+  label,
+  value,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  max: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="inline-flex min-h-11 items-center gap-2 rounded-md border border-input bg-card px-3">
+      <CalendarDays className="size-4 text-primary" aria-hidden />
+      <span className="text-xs font-semibold text-muted-foreground">{label}</span>
+      <input
+        type="date"
+        aria-label={label}
+        value={value}
+        max={max}
+        onChange={(event) => onChange(event.target.value)}
+        className="bg-transparent text-sm font-semibold outline-none"
+      />
+    </label>
+  );
+}
+
+function ReportMonthPicker({
+  label,
+  value,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  max: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="inline-flex min-h-11 items-center gap-2 rounded-md border border-input bg-card px-3">
+      <CalendarDays className="size-4 text-primary" aria-hidden />
+      <span className="text-xs font-semibold text-muted-foreground">{label}</span>
+      <input
+        type="month"
+        aria-label={label}
+        value={value}
+        max={max}
+        onChange={(event) => onChange(event.target.value)}
+        className="bg-transparent text-sm font-semibold outline-none"
+      />
+    </label>
   );
 }
 

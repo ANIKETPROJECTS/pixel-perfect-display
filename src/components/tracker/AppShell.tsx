@@ -83,6 +83,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isActive = (item: NavItem) => {
     if (item.href === "/") return location.pathname === "/";
     if (item.href.startsWith("/admin")) return location.pathname === "/admin";
+    if (item.href.startsWith("/reports")) {
+      const targetHash = item.href.split("#")[1] ?? "daily";
+      const currentHash = location.hash.replace(/^#/, "");
+      return location.pathname === "/reports" && (currentHash ? currentHash === targetHash : targetHash === "daily");
+    }
     return location.pathname === "/reports";
   };
 
