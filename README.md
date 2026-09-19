@@ -22,3 +22,19 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Run on a VPS with PM2
+
+The production server is configured to listen on port `3010`:
+
+```sh
+npm install
+npm run build
+pm2 start ecosystem.config.cjs
+```
+
+The PM2 app name is `railsops-workforce-tracker`. To keep it running after a
+server reboot, run `pm2 save` after the first successful start. The current app
+does not require an external database or API credential; keep any future
+server-side secrets in the VPS environment instead of committing them to the
+ecosystem file.
