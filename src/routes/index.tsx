@@ -629,6 +629,16 @@ function DepartmentTaskView({
                           onCancel={() => setNoteTask(null)}
                         />
                       )}
+                      {log?.remarks && (
+                        <div
+                          role="note"
+                          className="mt-2 flex items-start gap-1.5 rounded-md border border-primary/15 bg-primary/5 px-2.5 py-2 text-xs text-muted-foreground"
+                        >
+                          <NotepadText className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
+                          <span className="font-semibold text-primary">Note:</span>
+                          <span className="min-w-0 break-words text-foreground">{log.remarks}</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
