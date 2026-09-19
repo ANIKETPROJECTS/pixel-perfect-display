@@ -6,12 +6,13 @@ import {
   CheckSquare,
   ClipboardCheck,
   ClipboardList,
-  CircleHelp,
   Clock3,
   FileBarChart,
   LogOut,
   LayoutDashboard,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   ShieldCheck,
   UserRoundCog,
@@ -61,8 +62,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { role, state, authUser, logout } = useTracker();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
   const visibleAdmin = role === "admin";
   const visibleReporting = visibleAdmin
     ? reporting
@@ -87,19 +88,38 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border bg-card md:flex">
-        <Brand />
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-border bg-card transition-[width] duration-200 md:flex",
+          sidebarCollapsed ? "w-[76px]" : "w-64",
+        )}
+      >
+        <div className={cn("border-b border-border", sidebarCollapsed ? "px-2 py-3" : "px-4 py-4")}>
+          <Brand collapsed={sidebarCollapsed} />
+        </div>
+        <button
+          type="button"
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+          className="absolute right-0 top-7 z-40 inline-flex size-7 translate-x-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground"
+        >
+          {sidebarCollapsed ? (
+            <PanelLeftOpen className="size-3.5" aria-hidden />
+          ) : (
+            <PanelLeftClose className="size-3.5" aria-hidden />
+          )}
+        </button>
         <div className="flex-1 overflow-y-auto px-3 py-4">
-          <SidebarGroups groups={groups} isActive={isActive} />
+          <SidebarGroups groups={groups} isActive={isActive} collapsed={sidebarCollapsed} />
         </div>
         <SidebarAccount
           displayName={profileName}
           role={role}
           email={authUser?.email}
+          collapsed={sidebarCollapsed}
           profileOpen={profileOpen}
-          aboutOpen={aboutOpen}
           onToggleProfile={() => setProfileOpen((open) => !open)}
-          onToggleAbout={() => setAboutOpen((open) => !open)}
           onLogout={logout}
         />
       </aside>
@@ -113,7 +133,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
           <aside className="relative flex h-full w-72 flex-col bg-card shadow-xl">
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <Brand compact />
+              <Brand />
               <button
                 aria-label="Close navigation"
                 className="inline-flex size-11 items-center justify-center rounded-md border border-input"
@@ -123,16 +143,20 @@ export function AppShell({ children }: { children: ReactNode }) {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-3 py-4">
-              <SidebarGroups groups={groups} isActive={isActive} onNavigate={() => setMobileOpen(false)} />
+              <SidebarGroups
+                groups={groups}
+                isActive={isActive}
+                onNavigate={() => setMobileOpen(false)}
+                collapsed={false}
+              />
             </div>
             <SidebarAccount
               displayName={profileName}
               role={role}
               email={authUser?.email}
+              collapsed={false}
               profileOpen={profileOpen}
-              aboutOpen={aboutOpen}
               onToggleProfile={() => setProfileOpen((open) => !open)}
-              onToggleAbout={() => setAboutOpen((open) => !open)}
               onLogout={() => {
                 setMobileOpen(false);
                 logout();
@@ -142,7 +166,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur md:ml-64">
+      <header
+        className={cn(
+          "sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur transition-[margin] duration-200",
+          sidebarCollapsed ? "md:ml-[76px]" : "md:ml-64",
+        )}
+      >
         <div className="flex min-h-[68px] items-center gap-3 px-4 py-3 md:px-6">
           <button
             aria-label="Open navigation"
@@ -185,7 +214,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1440px] px-4 py-4 md:ml-64 md:px-8 md:py-6">{children}</main>
+      <main
+        className={cn(
+          "mx-auto max-w-[1440px] px-4 py-4 transition-[margin] duration-200 md:px-8 md:py-6",
+          sidebarCollapsed ? "md:ml-[76px]" : "md:ml-64",
+        )}
+      >
+        {children}
+      </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card md:hidden">
         <div className="mx-auto flex max-w-5xl">
@@ -216,34 +252,26 @@ function SidebarAccount({
   displayName,
   role,
   email,
+  collapsed,
   profileOpen,
-  aboutOpen,
   onToggleProfile,
-  onToggleAbout,
   onLogout,
 }: {
   displayName: string;
   role: "admin" | "supervisor";
   email: string | undefined;
+  collapsed: boolean;
   profileOpen: boolean;
-  aboutOpen: boolean;
   onToggleProfile: () => void;
-  onToggleAbout: () => void;
   onLogout: () => void;
 }) {
   return (
-    <div className="border-t border-border p-3">
-      {profileOpen && (
+    <div className={cn("border-t border-border", collapsed ? "p-2" : "p-3")}>
+      {profileOpen && !collapsed && (
         <div className="mb-2 rounded-lg border border-border bg-muted/50 p-3 text-xs">
           <p className="font-semibold text-foreground">{displayName}</p>
           <p className="mt-1 text-muted-foreground">{role === "admin" ? "Administrator" : "Supervisor"}</p>
           {email && <p className="mt-1 truncate text-muted-foreground">{email}</p>}
-        </div>
-      )}
-      {aboutOpen && (
-        <div className="mb-2 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
-          <p className="font-semibold text-foreground">RailsOps Workforce Tracker</p>
-          <p className="mt-1 text-muted-foreground">Railway station workforce and daily operations hub.</p>
         </div>
       )}
       <div className="space-y-1">
@@ -251,44 +279,51 @@ function SidebarAccount({
           type="button"
           onClick={onToggleProfile}
           aria-expanded={profileOpen}
-          className="flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          title={collapsed ? "Profile" : undefined}
+          className={cn(
+            "flex items-center rounded-md font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+            collapsed
+              ? "mx-auto size-12 justify-center"
+              : "min-h-11 w-full gap-3 px-3 text-[15px]",
+          )}
         >
-          <UserRound className="size-4 shrink-0" aria-hidden />
-          <span>Profile</span>
-        </button>
-        <button
-          type="button"
-          onClick={onToggleAbout}
-          aria-expanded={aboutOpen}
-          className="flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
-          <CircleHelp className="size-4 shrink-0" aria-hidden />
-          <span>About</span>
+          <UserRound className="size-5 shrink-0" aria-hidden />
+          {!collapsed && <span>Profile</span>}
         </button>
         <button
           type="button"
           onClick={onLogout}
-          className="flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-danger-soft hover:text-danger"
+          title={collapsed ? "Logout" : undefined}
+          className={cn(
+            "flex items-center rounded-md font-medium text-muted-foreground transition-colors hover:bg-danger-soft hover:text-danger",
+            collapsed
+              ? "mx-auto size-12 justify-center"
+              : "min-h-11 w-full gap-3 px-3 text-[15px]",
+          )}
         >
-          <LogOut className="size-4 shrink-0" aria-hidden />
-          <span>Logout</span>
+          <LogOut className="size-5 shrink-0" aria-hidden />
+          {!collapsed && <span>Logout</span>}
         </button>
       </div>
-      <p className="mt-3 px-3 text-[11px] text-muted-foreground">Railway station operations</p>
+      {!collapsed && (
+        <p className="mt-3 px-3 text-xs text-muted-foreground">Railway station operations</p>
+      )}
     </div>
   );
 }
 
-function Brand({ compact = false }: { compact?: boolean }) {
+function Brand({ collapsed = false }: { collapsed?: boolean }) {
   return (
-    <div className={cn("flex items-center gap-3 px-5 py-5", compact && "px-0 py-0")}>
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-         <RailOpsMark className="size-5" />
+    <div className={cn("flex min-w-0 items-center gap-3", collapsed && "justify-center")}>
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <RailOpsMark className="size-6" />
       </div>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-bold">RailsOps Workforce</p>
-        <p className="truncate text-xs text-muted-foreground">Station Operations Hub</p>
-      </div>
+      {!collapsed && (
+        <div className="min-w-0">
+          <p className="truncate text-base font-bold">RailsOps Workforce</p>
+          <p className="truncate text-sm text-muted-foreground">Station Operations Hub</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -297,18 +332,23 @@ function SidebarGroups({
   groups,
   isActive,
   onNavigate,
+  collapsed,
 }: {
   groups: { label: string; items: NavItem[] }[];
   isActive: (item: NavItem) => boolean;
   onNavigate?: () => void;
+  collapsed: boolean;
 }) {
   return (
-    <nav className="space-y-6" aria-label="Module navigation">
+    <nav className={cn("space-y-6", collapsed && "space-y-5")} aria-label="Module navigation">
       {groups.map((group) => (
         <section key={group.label} aria-labelledby={`nav-${group.label}`}>
           <p
             id={`nav-${group.label}`}
-            className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+            className={cn(
+              "mb-2 px-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+              collapsed && "sr-only",
+            )}
           >
             {group.label}
           </p>
@@ -316,7 +356,10 @@ function SidebarGroups({
             {group.items.map((item) => {
               const Icon = item.icon;
               const className = cn(
-                "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
+                "font-medium transition-colors",
+                collapsed
+                  ? "mx-auto flex size-12 items-center justify-center rounded-lg"
+                  : "flex min-h-12 items-center gap-3 rounded-md px-3 text-[15px]",
                 isActive(item)
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -328,14 +371,23 @@ function SidebarGroups({
                   href={item.href}
                   className={className}
                   onClick={onNavigate}
+                  title={collapsed ? item.label : undefined}
+                  aria-label={collapsed ? item.label : undefined}
                 >
-                  <Icon className="size-4 shrink-0" aria-hidden />
-                  {item.label}
+                  <Icon className={cn("shrink-0", collapsed ? "size-6" : "size-5")} aria-hidden />
+                  {!collapsed && item.label}
                 </Link>
               ) : (
-                <a key={item.label} href={item.href} className={className} onClick={onNavigate}>
-                  <Icon className="size-4 shrink-0" aria-hidden />
-                  {item.label}
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className={className}
+                  onClick={onNavigate}
+                  title={collapsed ? item.label : undefined}
+                  aria-label={collapsed ? item.label : undefined}
+                >
+                  <Icon className={cn("shrink-0", collapsed ? "size-6" : "size-5")} aria-hidden />
+                  {!collapsed && item.label}
                 </a>
               );
             })}
