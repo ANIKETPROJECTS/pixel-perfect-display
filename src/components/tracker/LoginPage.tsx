@@ -1,5 +1,6 @@
-import { LockKeyhole, Mail, TrainFront } from "lucide-react";
+import { LockKeyhole, Mail } from "lucide-react";
 import { useState } from "react";
+import { RailOpsMark } from "./RailOpsMark";
 
 export function LoginPage({
   onLogin,
@@ -25,12 +26,12 @@ export function LoginPage({
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <TrainFront className="size-6" aria-hidden />
+            <RailOpsMark className="size-6" />
           </div>
           <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
             Workforce operations
           </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight">Platform Workforce</h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight">RailsOps Workforce Tracker</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Sign in to manage railway station workforce records.
           </p>

@@ -31,17 +31,17 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Admin Panel — Platform Workforce Tracker" },
+      { title: "Administration — RailsOps Workforce Tracker" },
       {
         name: "description",
         content:
-          "Manage departments, job schedules, shifts, employees and supervisors, edit attendance and review the audit trail.",
+          "Manage railway workforce registration, departments, schedules, attendance, and audit records.",
       },
-      { property: "og:title", content: "Admin Panel — Platform Workforce Tracker" },
+      { property: "og:title", content: "Administration — RailsOps Workforce Tracker" },
       {
         property: "og:description",
         content:
-          "Manage departments, job schedules, shifts, employees and supervisors, edit attendance and review the audit trail.",
+          "Manage railway workforce registration, departments, schedules, attendance, and audit records.",
       },
     ],
   }),

@@ -16,13 +16,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Today's Round — Platform Workforce Tracker" },
+      { title: "Today's Round — RailsOps Workforce Tracker" },
       {
         name: "description",
         content:
           "Department-first daily workforce operations with task, attendance, and quality marking.",
       },
-      { property: "og:title", content: "Today's Round — Platform Workforce Tracker" },
+      { property: "og:title", content: "Today's Round — RailsOps Workforce Tracker" },
     ],
   }),
   component: Dashboard,

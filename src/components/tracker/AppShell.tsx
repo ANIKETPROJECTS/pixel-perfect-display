@@ -13,7 +13,6 @@ import {
   Menu,
   Settings,
   ShieldCheck,
-  TrainFront,
   UserRoundCog,
   Users,
   Wrench,
@@ -22,6 +21,7 @@ import {
 import { useState, type ComponentType, type ReactNode } from "react";
 import { useTracker } from "@/lib/tracker-store";
 import { cn } from "@/lib/utils";
+import { RailOpsMark } from "./RailOpsMark";
 
 type NavItem = {
   label: string;
@@ -200,11 +200,11 @@ function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <div className={cn("flex items-center gap-3 px-5 py-5", compact && "px-0 py-0")}>
       <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-        <TrainFront className="size-5" aria-hidden />
+         <RailOpsMark className="size-5" />
       </div>
       <div className="min-w-0">
-        <p className="truncate text-sm font-bold">Platform Workforce</p>
-        <p className="truncate text-xs text-muted-foreground">Indian Railways</p>
+        <p className="truncate text-sm font-bold">RailsOps Workforce</p>
+        <p className="truncate text-xs text-muted-foreground">Station Operations Hub</p>
       </div>
     </div>
   );

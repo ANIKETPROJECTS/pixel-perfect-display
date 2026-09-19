@@ -8,13 +8,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/reports")({
   head: () => ({
     meta: [
-      { title: "Compliance Reports — Platform Workforce Tracker" },
+      { title: "Compliance Reports — RailsOps Workforce Tracker" },
       {
         name: "description",
         content:
           "Daily, monthly, HRMS, and flagged-work reports for workforce accountability.",
       },
-      { property: "og:title", content: "Compliance Reports — Platform Workforce Tracker" },
+      { property: "og:title", content: "Compliance Reports — RailsOps Workforce Tracker" },
     ],
   }),
   component: Reports,

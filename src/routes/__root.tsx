@@ -80,18 +80,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Platform Workforce Tracker" },
+      { title: "RailsOps Workforce Tracker" },
       {
         name: "description",
         content:
-          "Track daily task compliance and attendance for railway platform housekeeping staff.",
+          "Railway station workforce, task compliance, attendance, and HRMS operations in one hub.",
       },
-      { name: "author", content: "Platform Workforce Tracker" },
-      { property: "og:title", content: "Platform Workforce Tracker" },
+      { name: "author", content: "RailsOps Workforce Tracker" },
+      { property: "og:title", content: "RailsOps Workforce Tracker" },
       {
         property: "og:description",
         content:
-          "Track daily task compliance and attendance for railway platform housekeeping staff.",
+          "Railway station workforce, task compliance, attendance, and HRMS operations in one hub.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -104,7 +104,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/railops-icon.svg", type: "image/svg+xml" },
+      { rel: "apple-touch-icon", href: "/railops-icon.svg" },
     ],
   }),
   shellComponent: RootShell,
