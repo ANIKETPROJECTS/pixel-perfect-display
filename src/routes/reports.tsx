@@ -398,12 +398,30 @@ function Reports() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Reporting</p>
-        <h2 className="mt-1 text-2xl font-bold tracking-tight">Compliance & exports</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Daily operations, monthly performance, HRMS exports, and internal accountability.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Reporting</p>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight">Compliance & exports</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Daily operations, monthly performance, HRMS exports, and internal accountability.
+          </p>
+        </div>
+        {(activeTab === "daily" || activeTab === "monthly") && (
+          <div className="flex shrink-0 gap-2">
+            <button
+              onClick={() => downloadCsv(reportCsv.filename, reportCsv.rows)}
+              className="inline-flex min-h-11 items-center gap-1 rounded-md border border-input bg-card px-3 text-sm font-medium shadow-sm"
+            >
+              <Download className="size-4" aria-hidden /> CSV
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="inline-flex min-h-11 items-center gap-1 rounded-md border border-input bg-card px-3 text-sm font-medium shadow-sm"
+            >
+              <Printer className="size-4" aria-hidden /> PDF
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2 rounded-xl border border-border bg-card p-2">
@@ -427,23 +445,6 @@ function Reports() {
           </button>
         ))}
       </div>
-
-      {(activeTab === "daily" || activeTab === "monthly") && (
-        <div className="flex flex-wrap justify-end gap-2">
-          <button
-            onClick={() => downloadCsv(reportCsv.filename, reportCsv.rows)}
-            className="inline-flex min-h-11 items-center gap-1 rounded-md border border-input bg-card px-3 text-sm font-medium"
-          >
-            <Download className="size-4" aria-hidden /> CSV
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="inline-flex min-h-11 items-center gap-1 rounded-md border border-input bg-card px-3 text-sm font-medium"
-          >
-            <Printer className="size-4" aria-hidden /> PDF
-          </button>
-        </div>
-      )}
 
       {activeTab === "daily" && (
         <section className="space-y-4" id="daily">
