@@ -435,94 +435,61 @@ const completeRegistrationProfile: Partial<Employee> = {
   accountHolderName: "Ramesh Yadav",
 };
 
-export const employeeRegistrationProfiles: Record<string, Partial<Employee>> = {
-  e1: completeRegistrationProfile,
-  e3: {
-    ...completeRegistrationProfile,
-    fatherOrHusbandName: "Mahesh More",
-    dateOfBirth: "1990-04-22",
-    gender: "female",
-    photographFileName: "anita-more.jpg",
-    mobileNumber: "9876543203",
-    emergencyContactName: "Vijay More",
-    emergencyContactNumber: "9876543223",
-    aadhaarNumber: "123412344823",
-    supervisorId: "sup1",
-    gatePassNumber: "GTL-GP-0458",
-    accountHolderName: "Anita More",
-  },
-  e7: {
-    fatherOrHusbandName: "Dattatray Kamble",
-    dateOfBirth: "1991-09-18",
-    gender: "female",
-    photographFileName: "meena-kamble.jpg",
-    mobileNumber: "9876543207",
-    emergencyContactName: "Ravi Kamble",
-    emergencyContactNumber: "9876543227",
-    currentAddress: "Railway quarters, Guntakal",
-    aadhaarNumber: "123412344827",
-    policeVerificationStatus: "pending",
-    medicalFitnessStatus: "no",
-    employmentType: "contract",
-    supervisorId: "sup1",
-    gatePassNumber: "GTL-GP-0462",
-  },
-  e12: {
-    fatherOrHusbandName: "Mohan Chavan",
-    dateOfBirth: "1989-12-03",
-    gender: "female",
-    photographFileName: "rekha-chavan.jpg",
-    mobileNumber: "9876543212",
-    emergencyContactName: "Sanjay Chavan",
-    emergencyContactNumber: "9876543232",
-    currentAddress: "Old railway colony, Guntakal",
-    aadhaarNumber: "123412344832",
-    policeVerificationStatus: "rejected",
-    medicalFitnessStatus: "yes",
-    medicalFitnessDate: "2024-06-05",
-    employmentType: "contract",
-    supervisorId: "sup1",
-    gatePassNumber: "GTL-GP-0467",
-  },
-  e15: {
-    fatherOrHusbandName: "Raghunath Pandit",
-    gender: "male",
-    mobileNumber: "9876543215",
-    policeVerificationStatus: "pending",
-    medicalFitnessStatus: "no",
-    employmentType: "contract",
-    supervisorId: "sup1",
-  },
-};
+const dummyFirstNames = ["Ramesh", "Suresh", "Anita", "Kavita", "Mohan", "Sunita"];
+const dummyGenders: Gender[] = ["male", "male", "female", "female", "male", "female"];
+const dummyBloodGroups = ["B+", "O+", "A+", "AB+", "B-", "O-"];
 
-export const employeeDocuments: EmployeeDocument[] = [
-  ...(["aadhaar_front", "aadhaar_back", "police_verification", "medical_certificate", "address_proof"] as const).map(
+function employeeSlug(name: string) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+export const employeeRegistrationProfiles: Record<string, Partial<Employee>> = Object.fromEntries(
+  employees.map((employee, index) => {
+    const serial = index + 1;
+    const month = String((index % 9) + 1).padStart(2, "0");
+    const day = String((index % 20) + 1).padStart(2, "0");
+    const mobileSerial = String(3201 + index);
+    const emergencySerial = String(5201 + index);
+    return [
+      employee.id,
+      {
+        ...completeRegistrationProfile,
+        fatherOrHusbandName: `${dummyFirstNames[index % dummyFirstNames.length]} Family`,
+        dateOfBirth: `199${index % 5}-${month}-${day}`,
+        gender: dummyGenders[index % dummyGenders.length],
+        bloodGroup: dummyBloodGroups[index % dummyBloodGroups.length],
+        maritalStatus: serial % 3 === 0 ? "single" : "married",
+        photographFileName: `${employeeSlug(employee.name)}.jpg`,
+        mobileNumber: `987654${mobileSerial}`,
+        emergencyContactName: `${dummyFirstNames[(index + 2) % dummyFirstNames.length]} Emergency`,
+        emergencyContactNumber: `987654${emergencySerial}`,
+        currentAddress: `Railway quarters, Block ${String((index % 6) + 1)}, Guntakal`,
+        permanentAddress: `Railway quarters, Block ${String((index % 6) + 1)}, Guntakal`,
+        aadhaarNumber: `12341234${String(4821 + index)}`,
+        policeVerificationCertificateNumber: `PV/GTL/2024/${String(180 + index).padStart(4, "0")}`,
+        gatePassNumber: `GTL-GP-${String(4501 + index).padStart(4, "0")}`,
+        esicNumber: `110234567${String(8901 + index)}`,
+        pfUanNumber: `101234567${String(8901 + index)}`,
+        bankAccountNumber: `12345678${String(3210 + index)}`,
+        accountHolderName: employee.name,
+        bankNameAndBranch: "State Bank of India, Guntakal Branch",
+      },
+    ];
+  }),
+) as Record<string, Partial<Employee>>;
+
+export const employeeDocuments: EmployeeDocument[] = employees.flatMap((employee) =>
+  (["aadhaar_front", "aadhaar_back", "police_verification", "medical_certificate", "address_proof"] as const).map(
     (documentType) => ({
-      id: `doc-e1-${documentType}`,
-      employeeId: "e1",
+      id: `doc-${employee.id}-${documentType}`,
+      employeeId: employee.id,
       documentType,
-      fileUrl: `ramesh-yadav-${documentType}.pdf`,
-      uploadedAt: "2024-01-12T09:00:00.000Z",
+      fileUrl: `${employeeSlug(employee.name)}-${documentType}.pdf`,
+      uploadedAt: `${employee.joiningDate}T09:00:00.000Z`,
       uploadedBy: "Admin",
     }),
   ),
-  ...(["aadhaar_front", "aadhaar_back", "police_verification", "medical_certificate", "address_proof"] as const).map(
-    (documentType) => ({
-      id: `doc-e3-${documentType}`,
-      employeeId: "e3",
-      documentType,
-      fileUrl: `anita-more-${documentType}.pdf`,
-      uploadedAt: "2024-01-22T09:00:00.000Z",
-      uploadedBy: "Admin",
-    }),
-  ),
-  { id: "doc-e7-aadhaar_front", employeeId: "e7", documentType: "aadhaar_front", fileUrl: "meena-kamble-aadhaar.pdf", uploadedAt: "2024-01-18T09:00:00.000Z", uploadedBy: "Admin" },
-  { id: "doc-e7-address_proof", employeeId: "e7", documentType: "address_proof", fileUrl: "meena-kamble-address.pdf", uploadedAt: "2024-01-18T09:00:00.000Z", uploadedBy: "Admin" },
-  { id: "doc-e12-aadhaar_front", employeeId: "e12", documentType: "aadhaar_front", fileUrl: "rekha-chavan-aadhaar.pdf", uploadedAt: "2024-06-08T09:00:00.000Z", uploadedBy: "Admin" },
-  { id: "doc-e12-aadhaar_back", employeeId: "e12", documentType: "aadhaar_back", fileUrl: "rekha-chavan-aadhaar-back.pdf", uploadedAt: "2024-06-08T09:00:00.000Z", uploadedBy: "Admin" },
-  { id: "doc-e12-medical_certificate", employeeId: "e12", documentType: "medical_certificate", fileUrl: "rekha-chavan-medical.pdf", uploadedAt: "2024-06-08T09:00:00.000Z", uploadedBy: "Admin" },
-  { id: "doc-e15-aadhaar_front", employeeId: "e15", documentType: "aadhaar_front", fileUrl: "ajay-pandit-aadhaar.pdf", uploadedAt: "2024-07-12T09:00:00.000Z", uploadedBy: "Admin" },
-];
+);
 
 export const supervisors: Supervisor[] = [
   {

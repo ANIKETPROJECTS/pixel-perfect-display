@@ -24,7 +24,7 @@ import {
   type TrackerState,
 } from "./tracker-data";
 
-const STORAGE_KEY = "pwt-state-v5-registration";
+const STORAGE_KEY = "pwt-state-v5-registration-full-details";
 const SECURE_KEY_DB = "pwt-secure-storage";
 const SECURE_KEY_STORE = "keys";
 let persistenceSequence = 0;
