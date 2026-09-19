@@ -140,6 +140,7 @@ function Employees() {
           upsert("employees", {
             id: newId("e"),
             code: `EMP-${100 + state.employees.length + 1}`,
+            hrmsEmployeeId: `HR-${8801 + state.employees.length}`,
             name: "New Worker",
             departmentId: state.departments[0]?.id ?? "",
             jobTypeId: state.jobTypes[0]?.id ?? "",
@@ -170,6 +171,12 @@ function Employees() {
               className={inputCls}
               value={e.code}
               onChange={(ev) => upsert("employees", { ...e, code: ev.target.value })}
+            />
+            <input
+              className={inputCls}
+              value={e.hrmsEmployeeId}
+              placeholder="HRMS employee ID"
+              onChange={(ev) => upsert("employees", { ...e, hrmsEmployeeId: ev.target.value })}
             />
             <input
               className={inputCls}
@@ -247,7 +254,14 @@ function Departments() {
   return (
     <div className="space-y-2">
       <button
-        onClick={() => upsert("departments", { id: newId("d"), name: "New Department", zone: "" })}
+        onClick={() =>
+          upsert("departments", {
+            id: newId("d"),
+            name: "New Department",
+            zone: "",
+            group: "station",
+          })
+        }
         className="inline-flex min-h-11 items-center gap-1 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground"
       >
         <Plus className="size-4" aria-hidden /> Add department
@@ -268,6 +282,17 @@ function Departments() {
             placeholder="Platform / zone"
             onChange={(e) => upsert("departments", { ...d, zone: e.target.value })}
           />
+          <select
+            className={inputCls}
+            value={d.group}
+            aria-label={`Department group for ${d.name}`}
+            onChange={(e) =>
+              upsert("departments", { ...d, group: e.target.value as "station" | "colony" })
+            }
+          >
+            <option value="station">Station</option>
+            <option value="colony">Colony</option>
+          </select>
         </div>
       ))}
     </div>
@@ -284,6 +309,8 @@ function JobTypes() {
             id: newId("j"),
             departmentId: state.departments[0]?.id ?? "",
             title: "New Job Type",
+            frequencyPerDay: 1,
+            frequencyLabel: "1x/day",
             scheduledTimes: ["09:00"],
           })
         }
@@ -312,6 +339,28 @@ function JobTypes() {
               </option>
             ))}
           </select>
+          <Row>
+            <input
+              type="number"
+              min="0"
+              className={inputCls}
+              value={j.frequencyPerDay}
+              aria-label={`Frequency per day for ${j.title}`}
+              onChange={(e) =>
+                upsert("jobTypes", {
+                  ...j,
+                  frequencyPerDay: Number.parseInt(e.target.value, 10) || 0,
+                })
+              }
+            />
+            <input
+              className={inputCls}
+              value={j.frequencyLabel}
+              placeholder="Frequency label, e.g. Weekly"
+              aria-label={`Frequency label for ${j.title}`}
+              onChange={(e) => upsert("jobTypes", { ...j, frequencyLabel: e.target.value })}
+            />
+          </Row>
           <div className="flex flex-wrap items-center gap-2">
             {j.scheduledTimes.map((t, i) => (
               <div key={i} className="flex items-center gap-1">
@@ -349,7 +398,7 @@ function JobTypes() {
             </button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Frequency: {j.scheduledTimes.length}/day
+            Frequency: {j.frequencyLabel} · {j.frequencyPerDay} per day metadata
           </p>
         </div>
       ))}

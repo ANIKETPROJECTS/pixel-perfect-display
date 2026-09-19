@@ -113,6 +113,7 @@ function Reports() {
         return {
           emp: employee,
           dept: lk.dept(employee.departmentId)?.name ?? "",
+          totalWorkingDays: days.length,
           daysWorked: present,
           absent,
           leave,
@@ -125,21 +126,25 @@ function Reports() {
       });
   }, [lk, state]);
 
+  const monthLabel = new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+
   const hrmsRows = useMemo(
     () =>
-      daily.map((row) => [
+      monthly.map((row) => [
         row.emp.code,
+         row.emp.hrmsEmployeeId,
         row.emp.name,
         row.dept,
-        today,
-        row.attendance,
-        row.assigned,
-        row.done,
-        row.missed,
-        row.redo,
-        row.compliance,
+         monthLabel,
+         row.totalWorkingDays,
+         row.daysWorked,
+         row.absent,
+         `${row.attendance}%`,
+         row.assigned,
+         row.done,
+         `${row.compliance}%`,
       ]),
-    [daily, today],
+    [monthly, monthLabel],
   );
 
   const flagged = useMemo(
@@ -169,7 +174,6 @@ function Reports() {
     [lk, state],
   );
 
-  const monthLabel = new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
   const changeTab = (next: ReportTab) => {
     setTab(next);
     if (typeof window !== "undefined") window.history.replaceState(null, "", `/reports#${next}`);
@@ -304,13 +308,29 @@ function Reports() {
           <div className="rounded-xl border border-border bg-card p-4">
             <h3 className="font-semibold">HRMS export</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Export today’s workforce summary in the HRMS-ready column structure.
+              Export the current month’s workforce summary in the HRMS-ready column structure.
             </p>
             <button
               onClick={() =>
                 downloadCsv(
                   `hrms-workforce-${today}.csv`,
-                  [["Employee code", "Employee", "Department", "Date", "Attendance", "Tasks assigned", "Completed", "Missed", "Needs redo", "Compliance %"], ...hrmsRows],
+                  [
+                    [
+                      "employee_code",
+                      "hrms_employee_id",
+                      "employee_name",
+                      "department",
+                      "month",
+                      "total_working_days",
+                      "days_present",
+                      "days_absent",
+                      "attendance_pct",
+                      "tasks_assigned",
+                      "tasks_completed",
+                      "task_compliance_pct",
+                    ],
+                    ...hrmsRows,
+                  ],
                 )
               }
               className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground"
@@ -319,16 +339,32 @@ function Reports() {
             </button>
           </div>
           <Table
-            head={["Employee", "Department", "Date", "Attendance", "Assigned", "Done", "Missed", "Redo", "Compliance"]}
-            rows={daily.map((row) => [
+            head={[
+              "Employee code",
+              "HRMS ID",
+              "Employee",
+              "Department",
+              "Month",
+              "Working days",
+              "Present",
+              "Absent",
+              "Attendance",
+              "Assigned",
+              "Completed",
+              "Task compliance",
+            ]}
+            rows={monthly.map((row) => [
+              row.emp.code,
+              row.emp.hrmsEmployeeId,
               row.emp.name,
               row.dept,
-              today,
-              row.attendance,
+              monthLabel,
+              String(row.totalWorkingDays),
+              String(row.daysWorked),
+              String(row.absent),
+              `${row.attendance}%`,
               String(row.assigned),
               String(row.done),
-              String(row.missed),
-              String(row.redo),
               `${row.compliance}%`,
             ])}
           />

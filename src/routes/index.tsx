@@ -6,6 +6,7 @@ import {
   minutesOf,
   taskKey,
   type AttendanceStatus,
+  type Department,
   type Employee,
   type TaskStatus,
 } from "@/lib/tracker-data";
@@ -32,6 +33,18 @@ type Filter =
   | { kind: "shift"; id: string }
   | { kind: "missed" }
   | { kind: "flagged" };
+
+type DepartmentSummary = {
+  dept: Department;
+  employees: Employee[];
+  total: number;
+  completed: number;
+  pending: number;
+  missed: number;
+  flagged: number;
+  completion: number;
+  attendance: number;
+};
 
 const taskStatusLabel: Record<TaskStatus, string> = {
   pending: "Pending",
@@ -113,7 +126,7 @@ function DepartmentOverview({
   const { state } = useTracker();
   const lk = useLookups();
 
-  const summaries = departmentIds
+  const summaries: DepartmentSummary[] = departmentIds
     .map((id) => {
       const dept = lk.dept(id);
       const employees = state.employees.filter((e) => e.status === "active" && e.departmentId === id);
@@ -149,7 +162,7 @@ function DepartmentOverview({
         attendance: employees.length ? Math.round((present / employees.length) * 1000) / 10 : 0,
       };
     })
-    .filter((summary) => summary.dept);
+    .filter((summary): summary is DepartmentSummary => Boolean(summary.dept));
 
   return (
     <section aria-labelledby="department-overview" className="space-y-3">
@@ -159,37 +172,64 @@ function DepartmentOverview({
         </h3>
         <span className="text-xs text-muted-foreground">{summaries.length} departments</span>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {summaries.map((summary) => (
-          <button
-            key={summary.dept!.id}
-            onClick={() => onSelect(summary.dept!.id)}
-            className="group rounded-xl border border-border bg-card p-4 text-left transition hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-sm"
+      {(["station", "colony"] as const).map((group) => {
+        const groupSummaries = summaries.filter((summary) => summary.dept.group === group);
+        const isColony = group === "colony";
+        return (
+          <div
+            key={group}
+            className={cn(
+              "rounded-2xl border p-3",
+              isColony ? "border-orange-200 bg-orange-50/60" : "border-primary/20 bg-primary/5",
+            )}
           >
-            <div className="flex items-start justify-between gap-3">
+            <div className="mb-3 flex items-center justify-between gap-2">
               <div>
-                <p className="font-semibold">{summary.dept!.name}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{summary.dept!.zone}</p>
+                <h4 className={cn("font-semibold", isColony ? "text-orange-950" : "text-primary")}>
+                  {isColony ? "Colony" : "Station"}
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  {isColony ? "Residential colony work-stream" : "Railway station work-stream"}
+                </p>
               </div>
-              <ChevronRight
-                className="size-5 shrink-0 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-primary"
-                aria-hidden
-              />
+              <span className="rounded-full bg-card px-2 py-1 text-xs font-medium text-muted-foreground">
+                {groupSummaries.length} departments
+              </span>
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Metric label="Completion" value={`${summary.completion}%`} />
-              <Metric label="Attendance" value={`${summary.attendance}%`} />
-              <Metric label="Employees" value={String(summary.employees.length)} icon={Users} />
-              <Metric label="Tasks" value={`${summary.completed}/${summary.total}`} />
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {groupSummaries.map((summary) => (
+                <button
+                  key={summary.dept.id}
+                  onClick={() => onSelect(summary.dept.id)}
+                  className="group rounded-xl border border-border bg-card p-4 text-left transition hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">{summary.dept.name}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{summary.dept.zone}</p>
+                    </div>
+                    <ChevronRight
+                      className="size-5 shrink-0 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-primary"
+                      aria-hidden
+                    />
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <Metric label="Completion" value={`${summary.completion}%`} />
+                    <Metric label="Attendance" value={`${summary.attendance}%`} />
+                    <Metric label="Employees" value={String(summary.employees.length)} icon={Users} />
+                    <Metric label="Tasks" value={`${summary.completed}/${summary.total}`} />
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    <Badge tone="warning">{summary.pending} pending</Badge>
+                    <Badge tone="danger">{summary.missed} missed</Badge>
+                    <Badge tone="orange">{summary.flagged} flagged</Badge>
+                  </div>
+                </button>
+              ))}
             </div>
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              <Badge tone="warning">{summary.pending} pending</Badge>
-              <Badge tone="danger">{summary.missed} missed</Badge>
-              <Badge tone="orange">{summary.flagged} flagged</Badge>
-            </div>
-          </button>
-        ))}
-      </div>
+          </div>
+        );
+      })}
     </section>
   );
 }
