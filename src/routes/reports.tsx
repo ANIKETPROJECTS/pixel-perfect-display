@@ -109,7 +109,7 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
 }
 
 function Reports() {
-  const { state, today, now, role } = useTracker();
+  const { state, today, now, role, supervisorId } = useTracker();
   const lk = useLookups();
   const location = useLocation();
   const navigate = useNavigate({ from: "/reports" });
@@ -121,7 +121,11 @@ function Reports() {
   const [monthlyGroup, setMonthlyGroup] = useState<ReportGroup>("station");
   const [selectedMonthlyDeptId, setSelectedMonthlyDeptId] = useState<string | null>(null);
   const [hrmsGroup, setHrmsGroup] = useState<ReportGroup>("station");
-  const activeTab = role === "admin" || tab !== "flagged-work" ? tab : "daily";
+  const supervisorDepartmentIds = useMemo(
+    () => new Set(lk.supervisor(supervisorId)?.departmentIds ?? []),
+    [lk, supervisorId],
+  );
+  const activeTab = role === "admin" || role === "supervisor" || tab !== "flagged-work" ? tab : "daily";
   useEffect(() => {
     const hash = location.hash.replace(/^#/, "") as ReportTab;
     if (["daily", "monthly", "hrms-export", "flagged-work"].includes(hash)) setTab(hash);
@@ -383,8 +387,12 @@ function Reports() {
             markedBy: log.markedBy ?? "—",
           };
         })
-        .filter((row) => row.employee),
-    [lk, state],
+        .filter(
+          (row) =>
+            row.employee &&
+            (role === "admin" || supervisorDepartmentIds.has(row.employee.departmentId)),
+        ),
+    [lk, role, state, supervisorDepartmentIds],
   );
 
   const changeTab = (next: ReportTab) => {
@@ -763,7 +771,9 @@ function Reports() {
         </section>
       )}
 
-      {activeTab === "flagged-work" && role === "admin" && <FlaggedWorkLog rows={flagged} />}
+      {activeTab === "flagged-work" && (role === "admin" || role === "supervisor") && (
+        <FlaggedWorkLog rows={flagged} role={role} />
+      )}
     </div>
   );
 }
@@ -1126,7 +1136,13 @@ type FlaggedRow = {
   markedBy: string;
 };
 
-function FlaggedWorkLog({ rows }: { rows: FlaggedRow[] }) {
+function FlaggedWorkLog({
+  rows,
+  role,
+}: {
+  rows: FlaggedRow[];
+  role: "admin" | "supervisor";
+}) {
   const { state } = useTracker();
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState("all");
@@ -1156,7 +1172,9 @@ function FlaggedWorkLog({ rows }: { rows: FlaggedRow[] }) {
           <div>
             <h3 className="font-semibold text-orange-950">Flagged work log</h3>
             <p className="mt-1 text-sm text-orange-900/80">
-              Admin accountability record for missed work and quality issues that require a redo.
+              {role === "admin"
+                ? "Accountability record for missed work and quality issues that require a redo."
+                : "Review missed work and quality issues for your assigned departments, then follow up with the team."}
             </p>
           </div>
         </div>

@@ -56,6 +56,7 @@ const administration: NavItem[] = [
 
 const supervisorTools: NavItem[] = [
   { label: "Employee registration", icon: Users, href: "/admin#employees", to: "/admin" },
+  { label: "Flagged work log", icon: ShieldCheck, href: "/reports#flagged-work", to: "/reports" },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
