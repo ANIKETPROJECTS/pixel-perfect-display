@@ -351,9 +351,28 @@ export const employees: Employee[] = [
 ];
 
 export const supervisors: Supervisor[] = [
-  { id: "sup1", name: "R. Kulkarni", phone: "97xxxxxx11", departmentIds: ["d1", "d2", "d3", "d6", "d7", "d9", "d10", "d11"] },
-  { id: "sup2", name: "S. Deshmukh", phone: "97xxxxxx22", departmentIds: ["d4", "d5", "d8"] },
-  { id: "sup3", name: "A. Bhosale", phone: "97xxxxxx33", departmentIds: ["d12", "d13", "d14", "d15"] },
+  {
+    id: "sup1",
+    name: "R. Kulkarni",
+    phone: "97xxxxxx11",
+    departmentIds: [
+      "d1",
+      "d2",
+      "d3",
+      "d4",
+      "d5",
+      "d6",
+      "d7",
+      "d8",
+      "d9",
+      "d10",
+      "d11",
+      "d12",
+      "d13",
+      "d14",
+      "d15",
+    ],
+  },
 ];
 
 export const dateKey = (d: Date) =>
