@@ -224,7 +224,7 @@ function SidebarAccount({
 }: {
   displayName: string;
   role: "admin" | "supervisor";
-  email?: string;
+  email: string | undefined;
   profileOpen: boolean;
   aboutOpen: boolean;
   onToggleProfile: () => void;

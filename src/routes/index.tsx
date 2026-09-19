@@ -1,12 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AlertTriangle, ArrowLeft, Check, ChevronRight, Flag, Users } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Building2,
+  CalendarDays,
+  Check,
+  ChevronRight,
+  Clock3,
+  Flag,
+  Home,
+  Users,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import {
   attKey,
   minutesOf,
   taskKey,
   type AttendanceStatus,
   type Department,
+  type DepartmentGroup,
   type Employee,
   type TaskStatus,
 } from "@/lib/tracker-data";
@@ -57,6 +69,15 @@ function Dashboard() {
   const { state, role, supervisorId, today, now } = useTracker();
   const lk = useLookups();
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
+  const [departmentGroup, setDepartmentGroup] = useState<DepartmentGroup>("station");
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+
+  useEffect(() => {
+    const updateTime = () => setCurrentTime(new Date());
+    updateTime();
+    const timer = window.setInterval(updateTime, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const visibleDeptIds = useMemo(
     () =>
@@ -72,9 +93,7 @@ function Dashboard() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-            {today}
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Workforce operations</p>
           <h2 className="mt-1 text-2xl font-bold tracking-tight">
             {selectedDept ? selectedDept.name : "Department overview"}
           </h2>
@@ -86,11 +105,31 @@ function Dashboard() {
                 : "Your assigned departments, today’s completion, and quality flags."}
           </p>
         </div>
-        <div className="rounded-lg border border-border bg-card px-3 py-2 text-right text-xs text-muted-foreground">
-          <span className="block font-semibold text-foreground">
-            {visibleDeptIds.length} active departments
-          </span>
-          <span>Live operations view</span>
+        <div className="flex items-stretch gap-2">
+          <div className="min-w-[148px] rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary">
+              <Clock3 className="size-3.5" aria-hidden />
+              Current time
+            </div>
+            <p className="mt-1 text-lg font-bold tabular-nums">
+              {currentTime
+                ? currentTime.toLocaleTimeString("en-IN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    hour12: true,
+                  })
+                : "--:--:--"}
+            </p>
+          </div>
+          <div className="min-w-[148px] rounded-lg border border-border bg-card px-3 py-2">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <CalendarDays className="size-3.5" aria-hidden />
+              Today
+            </div>
+            <p className="mt-1 text-sm font-bold">{formatDashboardDate(today)}</p>
+            <p className="text-xs text-muted-foreground">{visibleDeptIds.length} active departments</p>
+          </div>
         </div>
       </div>
 
@@ -101,24 +140,99 @@ function Dashboard() {
           visibleDeptIds={visibleDeptIds}
         />
       ) : (
-        <DepartmentOverview
-          departmentIds={visibleDeptIds}
-          onSelect={setSelectedDeptId}
-          today={today}
-          now={now}
-        />
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3">
+            <div>
+              <p className="text-sm font-semibold">Choose workstream</p>
+              <p className="text-xs text-muted-foreground">Switch between station and colony departments.</p>
+            </div>
+            <div
+              className="inline-flex rounded-lg border border-border bg-muted p-1"
+              role="tablist"
+              aria-label="Department workstream"
+            >
+              <DepartmentToggle
+                active={departmentGroup === "station"}
+                label="Station"
+                count={state.departments.filter((department) => department.group === "station").length}
+                icon={Building2}
+                onClick={() => setDepartmentGroup("station")}
+              />
+              <DepartmentToggle
+                active={departmentGroup === "colony"}
+                label="Colony"
+                count={state.departments.filter((department) => department.group === "colony").length}
+                icon={Home}
+                onClick={() => setDepartmentGroup("colony")}
+              />
+            </div>
+          </div>
+          <DepartmentOverview
+            departmentIds={visibleDeptIds}
+            group={departmentGroup}
+            onSelect={setSelectedDeptId}
+            today={today}
+            now={now}
+          />
+        </>
       )}
     </div>
   );
 }
 
+function formatDashboardDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return value;
+  return new Date(year, month - 1, day).toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function DepartmentToggle({
+  active,
+  label,
+  count,
+  icon: Icon,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  count: number;
+  icon: typeof Building2;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={cn(
+        "inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors",
+        active ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <Icon className="size-4" aria-hidden />
+      {label}
+      <span className={cn("rounded-full px-1.5 py-0.5 text-[10px]", active ? "bg-primary-foreground/15" : "bg-card")}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
 function DepartmentOverview({
   departmentIds,
+  group,
   onSelect,
   today,
   now,
 }: {
   departmentIds: string[];
+  group: DepartmentGroup;
   onSelect: (id: string) => void;
   today: string;
   now: number;
@@ -164,72 +278,68 @@ function DepartmentOverview({
     })
     .filter((summary): summary is DepartmentSummary => Boolean(summary.dept));
 
+  const groupSummaries = summaries.filter((summary) => summary.dept.group === group);
+  const isColony = group === "colony";
+
   return (
     <section aria-labelledby="department-overview" className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 id="department-overview" className="text-sm font-semibold">
           Today by department
         </h3>
-        <span className="text-xs text-muted-foreground">{summaries.length} departments</span>
+        <span className="text-xs text-muted-foreground">{groupSummaries.length} departments</span>
       </div>
-      {(["station", "colony"] as const).map((group) => {
-        const groupSummaries = summaries.filter((summary) => summary.dept.group === group);
-        const isColony = group === "colony";
-        return (
-          <div
-            key={group}
-            className={cn(
-              "rounded-2xl border p-3",
-              isColony ? "border-orange-200 bg-orange-50/60" : "border-primary/20 bg-primary/5",
-            )}
-          >
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div>
-                <h4 className={cn("font-semibold", isColony ? "text-orange-950" : "text-primary")}>
-                  {isColony ? "Colony" : "Station"}
-                </h4>
-                <p className="text-xs text-muted-foreground">
-                  {isColony ? "Residential colony work-stream" : "Railway station work-stream"}
-                </p>
-              </div>
-              <span className="rounded-full bg-card px-2 py-1 text-xs font-medium text-muted-foreground">
-                {groupSummaries.length} departments
-              </span>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {groupSummaries.map((summary) => (
-                <button
-                  key={summary.dept.id}
-                  onClick={() => onSelect(summary.dept.id)}
-                  className="group rounded-xl border border-border bg-card p-4 text-left transition hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold">{summary.dept.name}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{summary.dept.zone}</p>
-                    </div>
-                    <ChevronRight
-                      className="size-5 shrink-0 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-primary"
-                      aria-hidden
-                    />
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <Metric label="Completion" value={`${summary.completion}%`} />
-                    <Metric label="Attendance" value={`${summary.attendance}%`} />
-                    <Metric label="Employees" value={String(summary.employees.length)} icon={Users} />
-                    <Metric label="Tasks" value={`${summary.completed}/${summary.total}`} />
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-1.5">
-                    <Badge tone="warning">{summary.pending} pending</Badge>
-                    <Badge tone="danger">{summary.missed} missed</Badge>
-                    <Badge tone="orange">{summary.flagged} flagged</Badge>
-                  </div>
-                </button>
-              ))}
-            </div>
+      <div
+        className={cn(
+          "rounded-2xl border p-3",
+          isColony ? "border-orange-200 bg-orange-50/60" : "border-primary/20 bg-primary/5",
+        )}
+      >
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <h4 className={cn("font-semibold", isColony ? "text-orange-950" : "text-primary")}>
+              {isColony ? "Colony" : "Station"}
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              {isColony ? "Residential colony work-stream" : "Railway station work-stream"}
+            </p>
           </div>
-        );
-      })}
+          <span className="rounded-full bg-card px-2 py-1 text-xs font-medium text-muted-foreground">
+            {groupSummaries.length} departments
+          </span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {groupSummaries.map((summary) => (
+            <button
+              key={summary.dept.id}
+              onClick={() => onSelect(summary.dept.id)}
+              className="group rounded-xl border border-border bg-card p-4 text-left transition hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold">{summary.dept.name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{summary.dept.zone}</p>
+                </div>
+                <ChevronRight
+                  className="size-5 shrink-0 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-primary"
+                  aria-hidden
+                />
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <Metric label="Completion" value={`${summary.completion}%`} />
+                <Metric label="Attendance" value={`${summary.attendance}%`} />
+                <Metric label="Employees" value={String(summary.employees.length)} icon={Users} />
+                <Metric label="Tasks" value={`${summary.completed}/${summary.total}`} />
+              </div>
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                <Badge tone="warning">{summary.pending} pending</Badge>
+                <Badge tone="danger">{summary.missed} missed</Badge>
+                <Badge tone="orange">{summary.flagged} flagged</Badge>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
