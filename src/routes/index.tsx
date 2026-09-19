@@ -5,10 +5,12 @@ import {
   Building2,
   CalendarDays,
   Check,
+  CheckCheck,
   ChevronRight,
   Clock3,
   Flag,
   Home,
+  MoreHorizontal,
   Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -63,6 +65,13 @@ const taskStatusLabel: Record<TaskStatus, string> = {
   completed: "Done",
   missed: "Missed",
   needs_redo: "Needs redo",
+};
+
+const attendanceLabel: Record<AttendanceStatus, string> = {
+  present: "Present",
+  absent: "Absent",
+  "half-day": "Half day",
+  leave: "Leave",
 };
 
 function Dashboard() {
@@ -375,15 +384,12 @@ function DepartmentTaskView({
 
   return (
     <section className="space-y-3" aria-labelledby="department-task-view">
-      <button
-        onClick={onBack}
-        className="inline-flex min-h-11 items-center gap-2 rounded-md border border-input bg-card px-3 text-sm font-medium"
-      >
-        <ArrowLeft className="size-4" aria-hidden /> Back to departments
-      </button>
       <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              Department marking
+            </p>
             <h3 id="department-task-view" className="text-lg font-bold">
               {dept?.name}
             </h3>
@@ -391,13 +397,22 @@ function DepartmentTaskView({
               {dept?.zone} · {employees.length} workers in this view
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <span className="size-2 rounded-full bg-success" /> Done
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <span className="size-2 rounded-full bg-orange-500" /> Needs redo
-            </span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <span className="size-2 rounded-full bg-success" /> Done
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="size-2 rounded-full bg-orange-500" /> Needs redo
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={onBack}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-input bg-card px-2.5 text-xs font-semibold text-foreground shadow-sm hover:bg-accent"
+            >
+              <ArrowLeft className="size-3.5" aria-hidden /> Departments
+            </button>
           </div>
         </div>
         <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1">
@@ -432,70 +447,105 @@ function DepartmentTaskView({
           const job = lk.job(emp.jobTypeId);
           const shift = lk.shift(emp.shiftId);
           const attendance = state.attendance[attKey(emp.id, today)];
+          const attendanceStatus: AttendanceStatus = attendance?.status ?? "present";
           const times = job?.scheduledTimes ?? [];
           const done = times.filter(
             (time) => state.taskLogs[taskKey(emp.id, today, time)]?.status === "completed",
           ).length;
           return (
-            <article key={emp.id} className="rounded-xl border border-border bg-card p-4">
-              <div className="flex flex-wrap items-start gap-3">
+            <article key={emp.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex min-w-[220px] flex-1 items-start gap-3">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-foreground">
                   {emp.name
                     .split(" ")
                     .map((part) => part[0])
                     .join("")}
                 </div>
-                <div className="min-w-[180px] flex-1">
+                <div className="min-w-0">
                   <p className="font-semibold">{emp.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {emp.code} · {job?.title} · {shift?.name} {shift?.start}–{shift?.end}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <label className="sr-only" htmlFor={`attendance-${emp.id}`}>
-                    Attendance for {emp.name}
-                  </label>
-                  <select
-                    id={`attendance-${emp.id}`}
-                    value={attendance?.status ?? "present"}
-                    onChange={(event) =>
-                      setAttendance(
-                        emp.id,
-                        today,
-                        event.target.value as AttendanceStatus,
-                        attendance?.remarks,
-                      )
-                    }
-                    className="min-h-11 rounded-md border border-input bg-card px-2 text-sm font-medium"
-                  >
-                    <option value="present">Present</option>
-                    <option value="absent">Absent</option>
-                    <option value="half-day">Half-day</option>
-                    <option value="leave">Leave</option>
-                  </select>
+                </div>
+                <div className="flex flex-col items-end gap-1.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Attendance
+                  </span>
+                  <div className="flex flex-wrap justify-end gap-1 rounded-lg bg-muted p-1">
+                    {(["present", "absent", "half-day", "leave"] as const).map((nextStatus) => (
+                      <button
+                        key={nextStatus}
+                        type="button"
+                        onClick={() =>
+                          setAttendance(emp.id, today, nextStatus, attendance?.remarks)
+                        }
+                        className={cn(
+                          "min-h-8 rounded-md px-2.5 text-xs font-semibold transition-colors",
+                          attendanceStatus === nextStatus
+                            ? nextStatus === "present"
+                              ? "bg-success text-success-foreground"
+                              : "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-card hover:text-foreground",
+                        )}
+                      >
+                        {attendanceLabel[nextStatus]}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {attendance?.status && attendance.status !== "present" && (
+              {attendanceStatus !== "present" && (
                 <input
-                  className="mt-3 min-h-11 w-full rounded-md border border-input bg-card px-3 text-sm"
-                  value={attendance.remarks ?? ""}
-                  placeholder="Optional attendance reason"
+                  aria-label={`Optional attendance reason for ${emp.name}`}
+                  className="mt-3 min-h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+                  value={attendance?.remarks ?? ""}
+                  placeholder="Optional attendance note"
                   onChange={(event) =>
-                    setAttendance(emp.id, today, attendance.status, event.target.value)
+                    setAttendance(emp.id, today, attendanceStatus, event.target.value)
                   }
                 />
               )}
 
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Shift checklist
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {times.length} scheduled rounds · {done} completed
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={attendanceStatus === "absent" || times.length === 0}
+                  onClick={() => {
+                    for (const time of times) setTask(emp.id, today, time, "completed");
+                  }}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-success/30 bg-success-soft px-2.5 text-xs font-semibold text-success-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <CheckCheck className="size-3.5" aria-hidden />
+                  Mark all done
+                </button>
+              </div>
+
+              {attendanceStatus === "absent" ? (
+                <div className="mt-3 rounded-lg border border-danger/20 bg-danger-soft px-3 py-2 text-xs font-medium text-danger">
+                  Absent today — shift tasks are not required.
+                </div>
+              ) : (
+                <div className="mt-3 flex flex-wrap gap-2">
                 {times.map((time) => {
                   const key = taskKey(emp.id, today, time);
                   const log = state.taskLogs[key];
                   const status = effectiveTaskStatus(log?.status, time, true, now);
                   const notDue = now > 0 && minutesOf(time) > now;
                   return (
-                    <div key={time} className="flex items-center gap-1">
+                    <div key={time} className="relative flex items-center gap-1">
                       <button
+                        type="button"
                         onClick={() => {
                           const next = status === "completed" ? "pending" : "completed";
                           setTask(emp.id, today, time, next);
@@ -521,16 +571,28 @@ function DepartmentTaskView({
                         {time}
                       </button>
                       <button
+                        type="button"
                         aria-label={`Edit ${time} status for ${emp.name}`}
                         onClick={() => setEditingTask(editingTask === key ? null : key)}
-                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-input text-xs text-muted-foreground hover:bg-accent"
+                        className="inline-flex min-h-11 min-w-9 items-center justify-center rounded-md border border-input text-xs text-muted-foreground hover:bg-accent"
                       >
-                        …
+                        <MoreHorizontal className="size-4" aria-hidden />
                       </button>
+                      {editingTask === key && (
+                        <TaskStatusMenu
+                          employeeName={emp.name}
+                          time={time}
+                          onSelect={(nextStatus) => {
+                            setTask(emp.id, today, time, nextStatus);
+                            setEditingTask(null);
+                          }}
+                        />
+                      )}
                     </div>
                   );
                 })}
-              </div>
+                </div>
+              )}
               {times.length > 0 && (
                 <div className="mt-3 flex items-center gap-2">
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-soft">
@@ -544,86 +606,51 @@ function DepartmentTaskView({
                   </span>
                 </div>
               )}
-              {times.map((time) => {
-                const key = taskKey(emp.id, today, time);
-                return editingTask === key ? (
-                  <TaskEditor
-                    key={`editor-${key}`}
-                    employee={emp}
-                    time={time}
-                    {...(state.taskLogs[key] ? { current: state.taskLogs[key] } : {})}
-                    onSave={(status, remarks) => {
-                      setTask(emp.id, today, time, status, remarks);
-                      setEditingTask(null);
-                    }}
-                  />
-                ) : null;
-              })}
             </article>
           );
         })}
       </div>
       <p className="text-xs text-muted-foreground">
-        Tap a task to mark it done. Use the … control to record Missed or Needs redo with a remark.
+        Tap a time to mark it done. Use the menu beside it for Missed or Needs redo.
       </p>
     </section>
   );
 }
 
-function TaskEditor({
-  employee,
+function TaskStatusMenu({
+  employeeName,
   time,
-  current,
-  onSave,
+  onSelect,
 }: {
-  employee: Employee;
+  employeeName: string;
   time: string;
-  current?: { status: TaskStatus; remarks?: string };
-  onSave: (status: TaskStatus, remarks: string) => void;
+  onSelect: (status: TaskStatus) => void;
 }) {
-  const [status, setStatus] = useState<TaskStatus>(current?.status ?? "pending");
-  const [remarks, setRemarks] = useState(current?.remarks ?? "");
-  const requiresRemark = status === "missed" || status === "needs_redo";
-
   return (
-    <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-semibold">
-          Update {employee.name} · {time}
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {(["completed", "missed", "needs_redo"] as const).map((nextStatus) => (
-            <button
-              key={nextStatus}
-              onClick={() => setStatus(nextStatus)}
-              className={cn(
-                "min-h-10 rounded-md border px-3 text-xs font-semibold",
-                status === nextStatus
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-input bg-card text-muted-foreground",
-              )}
-            >
-              {taskStatusLabel[nextStatus]}
-            </button>
-          ))}
-        </div>
-      </div>
-      {requiresRemark && (
-        <input
-          autoFocus
-          value={remarks}
-          onChange={(event) => setRemarks(event.target.value)}
-          placeholder="Required: explain what happened"
-          className="mt-3 min-h-11 w-full rounded-md border border-input bg-card px-3 text-sm"
-        />
-      )}
-      <button
-        disabled={requiresRemark && !remarks.trim()}
-        onClick={() => onSave(status, remarks)}
-        className="mt-3 min-h-11 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Save status
-      </button>
+    <div
+      role="menu"
+      aria-label={`Status options for ${employeeName} at ${time}`}
+      className="absolute left-0 top-full z-20 mt-1 min-w-[132px] rounded-lg border border-border bg-card p-1.5 shadow-lg"
+    >
+      <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Set status
+      </p>
+      {(["completed", "missed", "needs_redo"] as const).map((nextStatus) => (
+        <button
+          key={nextStatus}
+          type="button"
+          role="menuitem"
+          onClick={() => onSelect(nextStatus)}
+          className={cn(
+            "flex min-h-9 w-full items-center rounded-md px-2 text-left text-xs font-semibold hover:bg-accent",
+            nextStatus === "completed" && "text-success-foreground",
+            nextStatus === "missed" && "text-danger",
+            nextStatus === "needs_redo" && "text-orange-700",
+          )}
+        >
+          {taskStatusLabel[nextStatus]}
+        </button>
+      ))}
     </div>
   );
 }
