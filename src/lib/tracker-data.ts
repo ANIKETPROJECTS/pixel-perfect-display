@@ -96,7 +96,20 @@ export const departments: Department[] = [
   { id: "d9", name: "Garbage & Waste Management", zone: "Station waste collection", group: "station" },
   { id: "d10", name: "Pest & Rodent Control", zone: "Station pest control", group: "station" },
   { id: "d11", name: "Periodic & Specialized", zone: "Periodic assets and specialist work", group: "station" },
-  { id: "d12", name: "Colony Housekeeping", zone: "North and South railway colony", group: "colony" },
+  {
+    id: "d12",
+    name: "Colony Roads & Open Areas",
+    zone: "North and South railway colony roads and open areas",
+    group: "colony",
+  },
+  { id: "d13", name: "Colony Garbage & Waste", zone: "Railway colony waste collection", group: "colony" },
+  { id: "d14", name: "Colony Drains", zone: "Railway colony drains", group: "colony" },
+  {
+    id: "d15",
+    name: "Colony Pest & Vector Control",
+    zone: "Railway colony vector control and fogging",
+    group: "colony",
+  },
 ];
 
 export const jobTypes: JobType[] = [
@@ -263,41 +276,49 @@ export const jobTypes: JobType[] = [
   {
     id: "j21",
     departmentId: "d12",
-    title: "Open Area Sweeping",
+    title: "Open Area Sweeping (either side of roads)",
     frequencyPerDay: 1,
     frequencyLabel: "1x/day",
     scheduledTimes: ["10:00"],
   },
   {
     id: "j22",
-    departmentId: "d12",
-    title: "Colony Garbage Collection & Disposal",
+    departmentId: "d13",
+    title: "Garbage Collection, Segregation & Disposal",
     frequencyPerDay: 1,
     frequencyLabel: "Daily",
     scheduledTimes: ["09:00"],
   },
   {
     id: "j23",
-    departmentId: "d12",
-    title: "Colony Drains Cleaning",
+    departmentId: "d14",
+    title: "Drains Cleaning (papers/plastics removal)",
     frequencyPerDay: 1,
-    frequencyLabel: "1x/day + weekly desilting",
+    frequencyLabel: "1x/day",
     scheduledTimes: ["08:00"],
   },
   {
     id: "j24",
-    departmentId: "d12",
-    title: "Vector Control (Anti-larval/mosquito)",
+    departmentId: "d14",
+    title: "Drains Desilting",
+    frequencyPerDay: 0,
+    frequencyLabel: "Weekly",
+    scheduledTimes: ["10:00"],
+  },
+  {
+    id: "j25",
+    departmentId: "d15",
+    title: "Vector Control (Anti-larval/mosquito spraying)",
     frequencyPerDay: 0,
     frequencyLabel: "Weekly",
     scheduledTimes: ["11:00"],
   },
   {
-    id: "j25",
-    departmentId: "d12",
-    title: "Fogging Activities",
+    id: "j26",
+    departmentId: "d15",
+    title: "Fogging Activities (Malathion + Diesel)",
     frequencyPerDay: 0,
-    frequencyLabel: "Weekly/Fortnightly",
+    frequencyLabel: "Weekly (per tender: once/fortnight for full road area)",
     scheduledTimes: ["18:00"],
   },
 ];
@@ -323,14 +344,16 @@ export const employees: Employee[] = [
   { id: "e12", code: "EMP-112", hrmsEmployeeId: "HR-8812", name: "Rekha Chavan", departmentId: "d10", jobTypeId: "j16", shiftId: "s1", phone: "98xxxxxx12", zone: "All station areas", joiningDate: "2024-06-08", status: "active" },
   { id: "e13", code: "EMP-113", hrmsEmployeeId: "HR-8813", name: "Manoj Thorat", departmentId: "d6", jobTypeId: "j10", shiftId: "s1", phone: "98xxxxxx13", zone: "Circulating area", joiningDate: "2024-06-15", status: "active" },
   { id: "e14", code: "EMP-114", hrmsEmployeeId: "HR-8814", name: "Sneha Karpe", departmentId: "d7", jobTypeId: "j11", shiftId: "s1", phone: "98xxxxxx14", zone: "Station roofs and FOBs", joiningDate: "2024-07-01", status: "active" },
-  { id: "e15", code: "EMP-115", hrmsEmployeeId: "HR-8815", name: "Ajay Pandit", departmentId: "d12", jobTypeId: "j20", shiftId: "s1", phone: "98xxxxxx15", zone: "North and South colony", joiningDate: "2024-07-12", status: "active" },
-  { id: "e16", code: "EMP-116", hrmsEmployeeId: "HR-8816", name: "Poonam Khedkar", departmentId: "d12", jobTypeId: "j22", shiftId: "s1", phone: "98xxxxxx16", zone: "Railway colony", joiningDate: "2024-07-20", status: "active" },
+  { id: "e15", code: "EMP-115", hrmsEmployeeId: "HR-8815", name: "Ajay Pandit", departmentId: "d12", jobTypeId: "j20", shiftId: "s1", phone: "98xxxxxx15", zone: "North and South colony roads", joiningDate: "2024-07-12", status: "active" },
+  { id: "e16", code: "EMP-116", hrmsEmployeeId: "HR-8816", name: "Poonam Khedkar", departmentId: "d13", jobTypeId: "j22", shiftId: "s1", phone: "98xxxxxx16", zone: "Railway colony waste area", joiningDate: "2024-07-20", status: "active" },
+  { id: "e17", code: "EMP-117", hrmsEmployeeId: "HR-8817", name: "Nitin Salunkhe", departmentId: "d14", jobTypeId: "j23", shiftId: "s1", phone: "98xxxxxx17", zone: "Railway colony drains", joiningDate: "2024-08-02", status: "active" },
+  { id: "e18", code: "EMP-118", hrmsEmployeeId: "HR-8818", name: "Sarika Pol", departmentId: "d15", jobTypeId: "j25", shiftId: "s1", phone: "98xxxxxx18", zone: "Railway colony vector control", joiningDate: "2024-08-16", status: "active" },
 ];
 
 export const supervisors: Supervisor[] = [
   { id: "sup1", name: "R. Kulkarni", phone: "97xxxxxx11", departmentIds: ["d1", "d2", "d3", "d6", "d7", "d9", "d10", "d11"] },
   { id: "sup2", name: "S. Deshmukh", phone: "97xxxxxx22", departmentIds: ["d4", "d5", "d8"] },
-  { id: "sup3", name: "A. Bhosale", phone: "97xxxxxx33", departmentIds: ["d12"] },
+  { id: "sup3", name: "A. Bhosale", phone: "97xxxxxx33", departmentIds: ["d12", "d13", "d14", "d15"] },
 ];
 
 export const dateKey = (d: Date) =>
@@ -398,6 +421,8 @@ function seedHistory(today: Date) {
     ["e14", "09:00", "completed", "Done for this week's cycle."],
     ["e15", "07:00", "completed"],
     ["e16", "09:00", "missed", "Truck delayed, collection pending."],
+    ["e17", "08:00", "completed"],
+    ["e18", "11:00", "completed", "Spraying done for this week's cycle."],
   ];
   for (const [empId, time, status, remarks] of partial) {
     const emp = employees.find((e) => e.id === empId)!;

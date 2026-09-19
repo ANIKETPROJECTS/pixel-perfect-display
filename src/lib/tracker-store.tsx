@@ -24,7 +24,7 @@ import {
   type TrackerState,
 } from "./tracker-data";
 
-const STORAGE_KEY = "pwt-state-v4";
+const STORAGE_KEY = "pwt-state-v4-colony-split";
 
 function hydrateState(raw: string): TrackerState {
   const parsed = JSON.parse(raw) as Partial<TrackerState>;
